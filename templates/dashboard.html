@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Jira{% endblock %}
+
+{% block content %}
+<style>
+  .dashboard-container {
+    display: flex;
+    min-height: 80vh;
+    padding: 2rem 5%;
+    background-color: #f4f6fa;
+  }
+
+  .dashboard-sidebar {
+    width: 220px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    height: fit-content;
+    margin-right: 2rem;
+  }
+
+  .dashboard-sidebar a {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .dashboard-main {
+    flex: 1;
+  }
+
+  .widget-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .widget {
+    flex: 1;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 1rem;
+  }
+
+  .section {
+    margin-bottom: 2rem;
+  }
+
+  .section h3 {
+    margin-bottom: 0.5rem;
+  }
+</style>
+
+<div class="dashboard-container">
+  <div class="dashboard-sidebar">
+    <h4>Navigation</h4>
+    <a href="#projects">Projects</a>
+    <a href="#teams">Teams</a>
+    <a href="#tickets">Tickets</a>
+    <a href="#sprints">Sprints</a>
+    <a href="#notifications">Notifications</a>
+    <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
+  </div>
+
+  <div class="dashboard-main">
+    <h2>Welcome to your Dashboard</h2>
+
+    <div class="widget-grid">
+      <div class="widget">
+        <h4>Total Projects</h4>
+        <p>12</p>
+      </div>
+      <div class="widget">
+        <h4>Active Sprints</h4>
+        <p>3</p>
+      </div>
+      <div class="widget">
+        <h4>Open Tickets</h4>
+        <p>18</p>
+      </div>
+      <div class="widget">
+        <h4>Notifications</h4>
+        <p>5 New</p>
+      </div>
+    </div>
+
+    <div class="section" id="tickets">
+      <h3>Recent Tickets</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Ticket ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Priority</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>TCKT-101</td>
+            <td>Bug in Login Page</td>
+            <td>Open</td>
+            <td>High</td>
+          </tr>
+          <tr>
+            <td>TCKT-102</td>
+            <td>Add Sprint View</td>
+            <td>In Progress</td>
+            <td>Medium</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

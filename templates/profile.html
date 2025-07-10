@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}My Profile - Jira{% endblock %}
+
+{% block content %}
+<style>
+  .profile-container {
+    max-width: 800px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    font-family: 'Work Sans', sans-serif;
+  }
+
+  .profile-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .profile-header h2 {
+    color: #172b4d;
+    font-size: 2rem;
+  }
+
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .profile-grid label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: block;
+    color: #344563;
+  }
+
+  .profile-grid input {
+    width: 100%;
+    padding: 0.7rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: #f9fafc;
+  }
+
+  .profile-footer {
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  .btn-edit {
+    background-color: #0052cc;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .btn-edit:hover {
+    background-color: #0065ff;
+  }
+
+  @media (max-width: 600px) {
+    .profile-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="profile-container">
+  <div class="profile-header">
+    <h2>My Profile</h2>
+    <p>View and update your personal information</p>
+  </div>
+
+  <form id="profile-form">
+    <div class="profile-grid">
+      <div>
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" value="{{ user_profile.name or '' }}" disabled>
+      </div>
+      <div>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{ user.email }}" disabled>
+      </div>
+      <div>
+        <label for="phone">Phone Number</label>
+        <input type="text" id="phone" name="phone" value="{{ user_profile.phone or '' }}" disabled>
+      </div>
+      <div>
+        <label for="status">Status</label>
+        <input type="text" id="status" name="status" value="{{ 'Active' if user_profile.status else 'Inactive' }}" disabled>
+      </div>
+    </div>
+
+    <div class="profile-footer">
+      <button type="button" class="btn-edit" onclick="enableEditing()">Edit Profile</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function enableEditing() {
+    const inputs = document.querySelectorAll("#profile-form input");
+    inputs.forEach(input => input.disabled = false);
+  }
+</script>
+{% endblock %}

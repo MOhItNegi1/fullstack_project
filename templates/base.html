@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Jira Dashboard Clone{% endblock %}</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffffcc;
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 1rem 5%;
+      transition: top 0.3s;
+    }
+
+    .navbar a.logo {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #0052cc;
+      padding: 0.5rem 1rem;
+    }
+
+    .navbar .links a {
+      display: inline-block;
+      margin-left: 1rem;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .navbar .links a:hover {
+      background-color: #e6f0ff;
+      transform: translateY(-3px);
+      box-shadow: 0 4px 10px rgba(0, 82, 204, 0.1);
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-block;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #0052cc;
+      color: white;
+    }
+
+    .btn-outline {
+      border: 2px solid #0052cc;
+      color: #0052cc;
+    }
+
+    .hero {
+      background: #f4f8ff;
+      text-align: center;
+      padding: 3rem 5%;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero p {
+      max-width: 600px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: center;
+      padding: 2rem 5%;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 1.5rem;
+      width: 280px;
+      text-align: left;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .cta {
+      background: #e2f0ff;
+      text-align: center;
+      padding: 2rem 5%;
+    }
+
+    .footer {
+      background: #f8f9fa;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: space-between;
+      padding: 2rem 5%;
+    }
+
+    .footer div {
+      min-width: 150px;
+    }
+
+    .footer h4 {
+      margin-bottom: 0.5rem;
+    }
+
+    .footer a {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: #555;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <div class="navbar">
+    <a href="{{ url_for('home') }}" class="logo">Jira</a>
+    <div class="links">
+      <a href="#">Product</a>
+      <a href="#">Solutions</a>
+      <a href="#">Docs</a>
+
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Dashboard</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline">Logout</a>
+      {% else %}
+        <a href="{{ url_for('login_page') }}" class="btn btn-outline">Log In</a>
+        <a href="{{ url_for('register_page') }}" class="btn btn-primary">Try Free</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT -->
+  <div>
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div>
+      <h4>Product</h4>
+      <a href="#">Features</a>
+      <a href="#">Integrations</a>
+      <a href="#">Security</a>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <a href="#">About Us</a>
+      <a href="#">Careers</a>
+      <a href="#">Press</a>
+    </div>
+    <div>
+      <h4>Resources</h4>
+      <a href="#">Docs</a>
+      <a href="#">Community</a>
+      <a href="#">Support</a>
+    </div>
+  </div>
+
+</body>
+</html>

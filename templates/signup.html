@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Jira{% endblock %}
+
+{% block content %}
+<div style="display: flex; align-items: center; justify-content: center; height: calc(100vh - 60px); background: #f4f5f7;">
+  <div style="background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); max-width: 400px; width: 100%;">
+    <h2 style="text-align:center; color:#172B4D;">Create your Jira Account</h2>
+
+    <form id="signupForm">
+      <label>Full Name</label>
+      <input type="text" id="name" placeholder="Enter full name" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;">
+
+      <label>Email</label>
+      <input type="email" id="email" placeholder="Enter email" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;">
+
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Create password" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;">
+
+      <label>Role</label>
+      <select id="role" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ccc; border-radius:4px;">
+        <option value="developer">Developer</option>
+        <option value="manager">Manager</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <button type="submit" style="width:100%; padding:12px; background:#0052cc; color:#fff; border:none; border-radius:4px;">Sign Up</button>
+    </form>
+
+    <p id="signupMessage" style="text-align:center; margin-top:15px;"></p>
+
+    <p style="text-align:center; margin-top:15px;">
+      Already have an account? <a href="{{ url_for('login_page') }}" style="color:#0052cc;">Log in</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  document.getElementById("signupForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const role = document.getElementById("role").value;
+    const message = document.getElementById("signupMessage");
+
+    const response = await fetch("/register_data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, role })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      message.style.color = "green";
+      message.textContent = "✅ " + result.message;
+      setTimeout(() => window.location.href = "/login", 1200);
+    } else {
+      message.style.color = "red";
+      message.textContent = "❌ " + result.message;
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to Jira Clone{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<div class="hero">
+  <h1>Plan, track, and ship world-class software</h1>
+  <p>Jira Software is the #1 tool for agile teams to plan, track, and release great software.</p>
+  <a href="{{ url_for('register_page') }}" class="btn btn-primary">Get Started</a>
+  <a href="#features" class="btn btn-outline">Learn More</a>
+</div>
+
+<!-- FEATURES -->
+<div id="features" class="features">
+  <div class="card">
+    <h3>Agile Boards</h3>
+    <p>Customize Scrum and Kanban boards to support your workflow and deliver value faster.</p>
+  </div>
+  <div class="card">
+    <h3>Advanced Roadmaps</h3>
+    <p>Plan and track across multiple teams with visibility into your goals.</p>
+  </div>
+  <div class="card">
+    <h3>Dev Integration</h3>
+    <p>Connect Jira with Bitbucket, GitHub, GitLab for seamless DevOps workflows.</p>
+  </div>
+  <div class="card">
+    <h3>Automation</h3>
+    <p>Automate repetitive tasks with custom rules to boost team productivity.</p>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  <h2>Start your journey with Jira Software</h2>
+  <a href="{{ url_for('register_page') }}" class="btn btn-primary">Try it Free</a>
+</div>
+{% endblock %}
