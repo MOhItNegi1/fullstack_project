@@ -200,15 +200,18 @@ class Login(Resource):
         password=data.get('password')
         role=data.get('role')
         user=User.query.filter_by(email=email).first()
-        user_roles = [ur.role.roles for ur in user.roles]
+        
         if not user or not check_password_hash(user.password, password):
             return {"message": "Invalid credentials"}, 401
-
+        user_roles = [ur.role.roles for ur in user.roles]
         if role not in user_roles:
             return {"message": "Invalid role"}, 401
 
         access_token = create_access_token(identity=str(user.id))
-        return {"access_token": access_token}, 200
+        return {
+            "access_token": access_token,
+            "user": {"id": user.id, "email": user.email, "roles": user_roles}
+        }, 200
 
 class GenerateTicket(Resource):
     @jwt_required()
@@ -751,11 +754,9 @@ api.add_resource(Search, "/search/<string:text>")
 
 
 
-
-
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('home.html')
 
 @app.route('/login')
 def login_page():
@@ -774,6 +775,11 @@ def dashboard():
 @app.route('/register')
 def register_page():
     return render_template('signup.html')
+
+@app.route('/projects')
+def project_page():
+    return render_template('project.html')
+
 
 if __name__ == "__main__":
     with app.app_context():

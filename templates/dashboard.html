@@ -1,34 +1,56 @@
+
 {% extends "base.html" %}
 {% block title %}Dashboard - Jira{% endblock %}
 
 {% block content %}
 <style>
-  .dashboard-container {
-    display: flex;
-    min-height: 80vh;
-    padding: 2rem 5%;
-    background-color: #f4f6fa;
+  body {
+    margin: 0;
+    padding: 0;
   }
 
   .dashboard-sidebar {
-    width: 220px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 1rem;
-    height: fit-content;
-    margin-right: 2rem;
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    padding: 2rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .dashboard-sidebar h4 {
+    margin-bottom: 1.5rem;
+    font-size: 1.2rem;
   }
 
   .dashboard-sidebar a {
     display: block;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
     color: #333;
     font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .dashboard-sidebar a:hover {
+    color: #0052cc;
+  }
+
+  .dashboard-container {
+    display: flex;
+    margin-left: 240px; /* accounts for fixed sidebar */
+    padding-top: 60px;   /* accounts for fixed header */
+    background-color: #f4f6fa;
+    min-height: calc(100vh - 60px);
   }
 
   .dashboard-main {
     flex: 1;
+    padding: 2rem;
   }
 
   .widget-grid {
@@ -45,6 +67,7 @@
     border: 1px solid #ccc;
     border-radius: 6px;
     padding: 1rem;
+    text-align: center;
   }
 
   .section {
@@ -54,38 +77,71 @@
   .section h3 {
     margin-bottom: 0.5rem;
   }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+  }
+
+  th {
+    background: #f4f6fa;
+    font-weight: 600;
+    color: #222;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .error-message {
+    color: #cc0000;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
 </style>
 
-<div class="dashboard-container">
-  <div class="dashboard-sidebar">
-    <h4>Navigation</h4>
-    <a href="#projects">Projects</a>
-    <a href="#teams">Teams</a>
-    <a href="#tickets">Tickets</a>
-    <a href="#sprints">Sprints</a>
-    <a href="#notifications">Notifications</a>
-    <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
-  </div>
+<!-- Fixed Sidebar -->
+<div class="dashboard-sidebar">
+  <h4>Navigation</h4>
+  <a href="/projects">Projects</a>
+  <a href="#teams">Teams</a>
+  <a href="#tickets">Tickets</a>
+  <a href="#sprints">Sprints</a>
+  <a href="#notifications">Notifications</a>
+  <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
+</div>
 
+<!-- Dashboard Content -->
+<div class="dashboard-container">
   <div class="dashboard-main">
     <h2>Welcome to your Dashboard</h2>
+    <div id="error-msg" class="error-message" style="display:none;"></div>
 
     <div class="widget-grid">
       <div class="widget">
         <h4>Total Projects</h4>
-        <p>12</p>
+        <p id="project-count">...</p>
       </div>
       <div class="widget">
         <h4>Active Sprints</h4>
-        <p>3</p>
+        <p id="sprint-count">...</p>
       </div>
       <div class="widget">
         <h4>Open Tickets</h4>
-        <p>18</p>
+        <p id="ticket-count">...</p>
       </div>
       <div class="widget">
         <h4>Notifications</h4>
-        <p>5 New</p>
+        <p id="notif-count">...</p>
       </div>
     </div>
 
@@ -100,23 +156,100 @@
             <th>Priority</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td>TCKT-101</td>
-            <td>Bug in Login Page</td>
-            <td>Open</td>
-            <td>High</td>
-          </tr>
-          <tr>
-            <td>TCKT-102</td>
-            <td>Add Sprint View</td>
-            <td>In Progress</td>
-            <td>Medium</td>
-          </tr>
+        <tbody id="tickets-tbody">
+          <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
+<script>
+function logout() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user_info');
+  window.location.href = '/';
+}
+
+function requireAuth() {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    window.location.href = '/login';
+    return null;
+  }
+  return token;
+}
+
+async function loadDashboard() {
+  const token = requireAuth();
+  if (!token) return;
+
+  function setCount(id, value) {
+    document.getElementById(id).textContent = value;
+  }
+
+  function showError(msg) {
+    const err = document.getElementById('error-msg');
+    err.textContent = msg;
+    err.style.display = 'block';
+  }
+
+  try {
+    const headers = { 'Authorization': 'Bearer ' + token };
+    const [projectsRes, sprintsRes, ticketsRes] = await Promise.all([
+      fetch('/projects/all', { headers }),
+      fetch('/sprints/all', { headers }),
+      fetch('/tickets/all', { headers }),
+    ]);
+
+    if (!projectsRes.ok || !sprintsRes.ok || !ticketsRes.ok) {
+      throw new Error("Session expired. Please login again.");
+    }
+
+    const [projects, sprints, tickets] = await Promise.all([
+      projectsRes.json(),
+      sprintsRes.json(),
+      ticketsRes.json()
+    ]);
+
+    setCount('project-count', projects.length || 0);
+    setCount('sprint-count', sprints.length || 0);
+    setCount('ticket-count', tickets.length || 0);
+
+    let notifCount = '...';
+    try {
+      const notifRes = await fetch('/notifications', { headers });
+      const notifs = await notifRes.json();
+      notifCount = Array.isArray(notifs) ? notifs.filter(n => !n.is_read).length : '...';
+    } catch (e) {
+      notifCount = '...';
+    }
+
+    setCount('notif-count', notifCount);
+
+    const tbody = document.getElementById('tickets-tbody');
+    tbody.innerHTML = '';
+    if (tickets.length > 0) {
+      tickets.slice(0, 5).forEach(ticket => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${ticket.id}</td>
+          <td>${ticket.title}</td>
+          <td>${ticket.status ? 'Closed' : 'Open'}</td>
+          <td>${ticket.priority}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } else {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No tickets found.</td></tr>`;
+    }
+
+  } catch (err) {
+    showError(err.message || "Failed to load dashboard. Please try again.");
+    setTimeout(() => { window.location.href = '/login'; }, 2000);
+  }
+}
+
+window.onload = loadDashboard;
+</script>
 {% endblock %}

@@ -1,13 +1,128 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Projects - Jira{% endblock %}
 
-{% block title %}Jira Dashboard - My Space{% endblock %}
-{%block content%}
-    <div class="content" id="mainContent">
-      <h1>Welcome to your dashboard</h1>
-      <p>This is the main content area.</p>
-      <div style="width: 1500px; background-color: #eee; padding: 20px;">
-        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Eius odit voluptas dicta asperiores non facere natus, minus quas expedita placeat recusandae quaerat fugit dignissimos culpa voluptate, mollitia, sapiente nisi veritatis architecto sit qui ad at rem? Reprehenderit deserunt debitis, illum perferendis magni ullam maxime alias tempora velit sunt. Amet porro maiores aspernatur delectus. Commodi expedita rem consequatur nisi itaque similique, quam, reiciendis blanditiis, dolore recusandae temporibus sint nam. Amet soluta cumque eaque corrupti vel quaerat modi dolore rerum earum aspernatur autem recusandae error enim itaque magni obcaecati laudantium ipsum quisquam quibusdam ducimus eveniet, beatae harum ullam delectus. Unde ad nihil velit fugit voluptas reprehenderit nulla nostrum ducimus nemo qui molestiae incidunt non quia, est et delectus veritatis, assumenda perferendis dolorum laborum dicta voluptatum, porro obcaecati recusandae. Corporis, molestias reiciendis. Illum necessitatibus at distinctio voluptate aspernatur quam. Magnam nobis voluptates delectus voluptas vel, quis ex eius veniam praesentium numquam quas! Cupiditate eveniet ad, rem libero ipsam, ex magnam praesentium omnis optio distinctio fugit! Explicabo ipsam neque corrupti nihil exercitationem voluptas, porro dicta, quaerat tempore quis culpa eligendi facilis soluta accusamus, ad magnam! Incidunt similique amet id eveniet iste ex iure nesciunt molestiae eligendi suscipit minus voluptatem commodi, vel magni veritatis, quibusdam consequatur numquam ullam alias culpa quia impedit earum quo? Doloribus ullam ratione porro totam quibusdam vel ex. Illo optio omnis exercitationem magni ullam eos doloremque est repellendus error distinctio obcaecati eum laudantium corrupti, maiores non, dicta dignissimos rem sint facilis aperiam earum explicabo ea modi accusantium. Delectus ipsum vitae non, fugiat necessitatibus, ex harum, expedita voluptatem nobis nesciunt iure ipsa provident. Atque repellendus repellat officiis, tempora, laborum officia, quisquam odit enim nulla quam dolorum? Natus, molestias illo alias amet ad iusto rem voluptatum odio quaerat id veritatis hic distinctio magnam quidem suscipit expedita, cupiditate voluptate. Rem laudantium in vero voluptatum.</p>
-      </div>
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container py-5">
+  <h2 class="mb-4">Project Management</h2>
+
+  <!-- Project Form -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      Create New Project
+    </div>
+    <div class="card-body">
+      <form id="projectForm">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="name" class="form-label">Project Name</label>
+            <input type="text" class="form-control" id="name" required>
+          </div>
+          <div class="col-md-6">
+            <label for="deadline" class="form-label">Deadline</label>
+            <input type="date" class="form-control" id="deadline" required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="description" class="form-label">Description</label>
+          <textarea class="form-control" id="description" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-success">Create Project</button>
+      </form>
     </div>
   </div>
-{%endblock%}
+
+  <!-- Project List -->
+  <div class="card">
+    <div class="card-header bg-secondary text-white">
+      Existing Projects
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-hover m-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Deadline</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="projectTableBody">
+          <tr>
+            <td colspan="5" class="text-center">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem("access_token");
+
+  // Create Project
+  document.getElementById("projectForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const name = document.getElementById("name").value;
+    const description = document.getElementById("description").value;
+    const deadline = document.getElementById("deadline").value;
+
+    const res = await fetch("/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ name, description, deadline })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Project created!");
+      loadProjects();
+      document.getElementById("projectForm").reset();
+    } else {
+      alert(data.message || "Error creating project.");
+    }
+  });
+
+  // Load Projects
+  async function loadProjects() {
+    const res = await fetch("/projects/all", {
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    });
+
+    const data = await res.json();
+    const tbody = document.getElementById("projectTableBody");
+    tbody.innerHTML = "";
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">No projects found.</td></tr>`;
+      return;
+    }
+
+    data.forEach(p => {
+      const row = `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.description}</td>
+          <td>${p.deadline}</td>
+          <td>${p.status}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-2" disabled>Edit</button>
+            <button class="btn btn-sm btn-outline-danger" disabled>Delete</button>
+          </td>
+        </tr>
+      `;
+      tbody.insertAdjacentHTML("beforeend", row);
+    });
+  }
+
+  window.onload = loadProjects;
+</script>
+{% endblock %}

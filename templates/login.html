@@ -183,6 +183,7 @@
 
       if (response.ok && result.access_token) {
         localStorage.setItem("access_token", result.access_token);
+        localStorage.setItem("user_info", JSON.stringify(result.user));
         window.location.href = "/dashboard";
       } else {
         alert(result.message || "Login failed");

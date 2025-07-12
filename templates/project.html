@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% block title %}Projects - Jira{% endblock %}
+
+{% block content %}
+<style>
+  .project-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .project-sidebar {
+    position: fixed;
+    top: 60px; /* below topbar */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background-color: #fff;
+    border-right: 1px solid #e2e8f0;
+    padding: 1.5rem 1rem;
+    z-index: 1000;
+  }
+
+  .project-sidebar h4 {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  .project-sidebar a {
+    display: block;
+    margin-bottom: 1rem;
+    color: #333;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .project-sidebar a:hover {
+    color: #0052cc;
+  }
+
+  .project-main {
+    margin-left: 240px;
+    padding: 2rem;
+    width: calc(100% - 240px);
+  }
+
+  /* Shared styles reused from dashboard look */
+  .section-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #172b4d;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    border-color: #0052cc;
+    outline: none;
+  }
+
+  .btn-submit {
+    background-color: #0052cc;
+    color: white;
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn-submit:hover {
+    background-color: #0041a8;
+  }
+
+  .project-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+    background-color: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .project-table th,
+  .project-table td {
+    padding: 0.9rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+
+  .project-table th {
+    background-color: #f4f6fa;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .project-table tr:hover {
+    background-color: #f0f4ff;
+    transition: background-color 0.2s ease;
+  }
+
+  .btn-action {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+  }
+
+  .btn-edit {
+    background-color: #e7f0ff;
+    color: #0052cc;
+    margin-right: 0.4rem;
+  }
+
+  .btn-delete {
+    background-color: #ffebeb;
+    color: #cc0000;
+  }
+</style>
+
+<!-- LAYOUT -->
+<div class="project-layout">
+
+  <!-- SIDEBAR -->
+  <div class="project-sidebar">
+    <h4>Navigation</h4>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/projects-page">Projects</a>
+    <a href="/teams">Teams</a>
+    <a href="/tickets">Tickets</a>
+    <a href="/sprints">Sprints</a>
+    <a href="/notifications">Notifications</a>
+    <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="project-main">
+    <h2 class="section-title">Project Management</h2>
+
+    <!-- Project Form -->
+    <form id="projectForm">
+      <div class="form-group">
+        <label for="name">Project Name</label>
+        <input type="text" id="name" required />
+      </div>
+      <div class="form-group">
+        <label for="deadline">Deadline</label>
+        <input type="date" id="deadline" required />
+      </div>
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" rows="3"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">Create Project</button>
+    </form>
+
+    <!-- Project List -->
+    <table class="project-table" id="projectTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Deadline</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="projectTableBody">
+        <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const token = localStorage.getItem("access_token");
+
+  // Submit project
+  document.getElementById("projectForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const name = document.getElementById("name").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const deadline = document.getElementById("deadline").value;
+
+    const res = await fetch("/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ name, description, deadline })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert("Project created successfully!");
+      document.getElementById("projectForm").reset();
+      loadProjects();
+    } else {
+      alert(data.message || "Failed to create project.");
+    }
+  });
+
+  async function loadProjects() {
+    const res = await fetch("/projects/all", {
+      headers: {
+        "Authorization": "Bearer " + token
+      }
+    });
+
+    const data = await res.json();
+    const tbody = document.getElementById("projectTableBody");
+    tbody.innerHTML = "";
+
+    if (data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No projects found.</td></tr>`;
+      return;
+    }
+
+    data.forEach(p => {
+      const row = `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.description}</td>
+          <td>${p.deadline}</td>
+          <td>${p.status}</td>
+          <td>
+            <button class="btn-action btn-edit" disabled>Edit</button>
+            <button class="btn-action btn-delete" disabled>Delete</button>
+          </td>
+        </tr>
+      `;
+      tbody.insertAdjacentHTML("beforeend", row);
+    });
+  }
+
+  window.onload = loadProjects;
+
+  function logout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_info");
+    window.location.href = "/";
+  }
+</script>
+{% endblock %}
