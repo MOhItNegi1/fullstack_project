@@ -199,7 +199,11 @@
 </div>
 
 <script>
-  const token = localStorage.getItem("access_token");
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+  alert("Please login first.");
+  window.location.href = "/login";
+}
 
   // Submit project
   document.getElementById("projectForm").addEventListener("submit", async function (e) {

@@ -13,7 +13,6 @@
 
     body {
       margin: 0;
-      display: flex;
       font-family: 'Inter', sans-serif;
       background-color: #f4f6fa;
       color: #1a1a1a;
@@ -22,48 +21,36 @@
     a { text-decoration: none; color: inherit; }
 
     .topbar {
-  width: 100%;
-  height: 60px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1001;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
+      width: 100%;
+      height: 60px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    }
 
-.topbar-content {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding-left: 1.5rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #0052cc;
-}
+    .topbar-content {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #0052cc;
+    }
 
-.topbar-content i {
-  font-size: 1.6rem;
-}
-
-
- 
-  
-
-    .logout-link { color: #cc0000; }
-    .try-free {
-      background-color: #0052cc;
-      color: white;
-      padding: 0.5rem 0.75rem;
-      text-align: center;
-      border-radius: 6px;
+    .topbar-content i {
+      font-size: 1.6rem;
     }
 
     .main-container {
-      padding-top: 60px; 
+      padding-top: 60px;
       width: 100%;
       min-height: 100vh;
       display: flex;
@@ -71,7 +58,6 @@
     }
 
     .main-content {
-      padding-top: 60px; 
       padding: 2rem;
       flex: 1;
     }
@@ -94,31 +80,52 @@
       color: #555;
       font-size: 0.95rem;
     }
+
+    .btn {
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+    }
+
+    .btn-outline-primary {
+      border: 1px solid #0052cc;
+      color: #0052cc;
+      background: transparent;
+    }
+
+    .btn-outline-danger {
+      border: 1px solid #cc0000;
+      color: #cc0000;
+      background: transparent;
+    }
+
+    .btn-primary {
+      background: #0052cc;
+      color: white;
+      border: none;
+    }
   </style>
 </head>
 
 <body>
   <!-- HEADER BAR -->
-<header class="topbar">
-  <div class="topbar-content">
-    <i class="fab fa-jira"></i>
-    <span>Jira</span>
-  </div>
-</header>
-
-
+  <header class="topbar">
+    <div class="topbar-content">
+      <i class="fab fa-jira"></i>
+      <span>Jira</span>
+    </div>
+    <div id="auth-buttons"></div>
+  </header>
 
   <!-- MAIN -->
   <div class="main-container">
-    <!-- HERO SECTION (optional for home.html) -->
     {% block hero %}{% endblock %}
-
-    <!-- PAGE CONTENT -->
     <div class="main-content">
       {% block content %}{% endblock %}
     </div>
 
-    <!-- FOOTER -->
     <div class="footer">
       <div>
         <h4>Product</h4>
@@ -143,30 +150,37 @@
 
   <!-- AUTHENTICATION LOGIC -->
   <script>
+  document.addEventListener("DOMContentLoaded", function () {
     const accessToken = localStorage.getItem("access_token");
     const user = localStorage.getItem("user_info") ? JSON.parse(localStorage.getItem("user_info")) : null;
 
-    if (accessToken && user) {
-      sidebarLinks.innerHTML = `
-        <a href="/">Home</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/profile">Profile (${user.email.split('@')[0]})</a>
-        <a href="#" class="logout-link" onclick="logout()">Logout</a>
-      `;
-    } else {
-      sidebarLinks.innerHTML = `
-        <a href="/">Home</a>
-        <a href="/login">Login</a>
-        <a href="/register" class="try-free">Try Free</a>
-      `;
+    const authButtons = document.getElementById("auth-buttons");
+
+    if (authButtons) {
+      if (accessToken && user) {
+        const username = user.email ? user.email.split('@')[0] : "User";
+
+        authButtons.innerHTML = `
+          <span style="margin-right: 1rem; font-weight: 500; color: #333;">Hi, <strong>${username}</strong></span>
+          <a href="/profile" class="btn btn-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Profile</a>
+          <button onclick="logout()" class="btn btn-outline-danger" style="padding: 0.4rem 0.9rem;">Logout</button>
+        `;
+      } else {
+        authButtons.innerHTML = `
+          <a href="/login" class="btn btn-outline-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Login</a>
+          <a href="/register" class="btn btn-primary" style="padding: 0.4rem 0.9rem;">Try Free</a>
+        `;
+      }
     }
 
-    function logout() {
+    window.logout = function () {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user_info");
       window.location.href = "/";
-    }
-  </script>
+    };
+  });
+</script>
 
+ 
 </body>
 </html>

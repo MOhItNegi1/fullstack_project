@@ -676,6 +676,57 @@ class Search(Resource):
         } for s in sprints]
 
         return results, 200
+    
+class ProfileResource(Resource):
+    @jwt_required()
+    def get(self):
+        current_user_id = get_jwt_identity()
+
+        user = User.query.get(current_user_id)
+        profile = UserProfile.query.filter_by(user_id=current_user_id).first()
+        roles = [ur.role.roles for ur in UserRoles.query.filter_by(user_id=current_user_id).all()]
+
+        if not user:
+            return {"message": "User not found"}, 404
+
+        return {
+            "name": user.name,
+            "email": user.email,
+            "phone": profile.phone_no if profile else "",
+            "availability": profile.availability if profile else "",
+            "roles": roles,
+            "created_at": str(user.created_at.date()),
+            "updated_at": str(user.updated_at.date())
+        }, 200
+
+    @jwt_required()
+    def put(self):
+        current_user_id = get_jwt_identity()
+        data = request.get_json()
+
+        user = User.query.get(current_user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+
+        profile = UserProfile.query.filter_by(user_id=current_user_id).first()
+        if not profile:
+            profile = UserProfile(user_id=current_user_id)
+
+        # Update fields
+        if "name" in data:
+            user.name = data["name"]
+        if "phone" in data:
+            profile.phone_no = data["phone"]
+        if "availability" in data:
+            profile.availability = data["availability"]
+
+        user.updated_at = datetime.utcnow()
+
+        db.session.add(user)
+        db.session.add(profile)
+        db.session.commit()
+
+        return {"message": "Profile updated successfully"}, 200
 
 
 def seed_notifications(user_id):
@@ -750,6 +801,7 @@ api.add_resource(SprintCreate, "/sprints")
 api.add_resource(SprintList, "/sprints/all")
 api.add_resource(SprintDetail, "/sprints/<int:id>") 
 api.add_resource(Search, "/search/<string:text>")
+api.add_resource(ProfileResource, "/api/profile")
 
 
 
@@ -763,10 +815,7 @@ def login_page():
     return render_template('login.html')
 
 
-@app.route('/profile')
-@jwt_required()
-def profile():
-    return render_template('profile.html')
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -779,6 +828,12 @@ def register_page():
 @app.route('/projects')
 def project_page():
     return render_template('project.html')
+
+
+@app.route("/profile")
+def profile_page():
+    return render_template("profile.html")
+
 
 
 if __name__ == "__main__":

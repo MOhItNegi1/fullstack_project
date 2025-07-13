@@ -1,113 +1,230 @@
 {% extends "base.html" %}
-{% block title %}My Profile - Jira{% endblock %}
+{% block title %}Profile - Jira{% endblock %}
 
 {% block content %}
 <style>
   .profile-container {
-    max-width: 800px;
-    margin: 3rem auto;
-    padding: 2rem;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    font-family: 'Work Sans', sans-serif;
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 2.5rem;
+    background: #ffffff;
+    border: 1px solid #e0e6ed;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    animation: fadeIn 0.5s ease;
   }
 
-  .profile-header {
+  .profile-container h2 {
     text-align: center;
     margin-bottom: 2rem;
+    color: #0052cc;
+    font-size: 1.8rem;
   }
 
-  .profile-header h2 {
-    color: #172b4d;
-    font-size: 2rem;
+  .profile-item {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.4s ease;
   }
 
-  .profile-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-  }
-
-  .profile-grid label {
+  .profile-item label {
     font-weight: 600;
-    margin-bottom: 0.25rem;
-    display: block;
-    color: #344563;
+    color: #333;
+    margin-bottom: 0.5rem;
   }
 
-  .profile-grid input {
-    width: 100%;
-    padding: 0.7rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+  .profile-item span,
+  .profile-item input,
+  .profile-item select {
     font-size: 1rem;
-    background-color: #f9fafc;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #d0d7e2;
+    background-color: #f9f9f9;
+    transition: box-shadow 0.3s ease;
   }
 
-  .profile-footer {
+  .profile-item input:focus,
+  .profile-item select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.2);
+  }
+
+  .profile-item span {
+    background-color: #f1f4f8;
+  }
+
+  .btn-row {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
     margin-top: 2rem;
-    text-align: center;
   }
 
-  .btn-edit {
+  .edit-btn,
+  .save-btn,
+  .cancel-btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+
+  .edit-btn {
     background-color: #0052cc;
     color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
   }
 
-  .btn-edit:hover {
-    background-color: #0065ff;
+  .edit-btn:hover {
+    background-color: #0041a8;
+    transform: translateY(-1px);
   }
 
-  @media (max-width: 600px) {
-    .profile-grid {
-      grid-template-columns: 1fr;
-    }
+  .save-btn {
+    background-color: #28a745;
+    color: white;
+  }
+
+  .save-btn:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+  }
+
+  .cancel-btn {
+    background-color: #6c757d;
+    color: white;
+  }
+
+  .cancel-btn:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 </style>
 
-<div class="profile-container">
-  <div class="profile-header">
-    <h2>My Profile</h2>
-    <p>View and update your personal information</p>
+<div class="profile-container" id="profileContent">
+  <h2>User Profile</h2>
+
+  <div class="profile-item">
+    <label>Name:</label>
+    <span id="profile-name-view"></span>
+    <input type="text" id="profile-name-edit" style="display: none;">
   </div>
 
-  <form id="profile-form">
-    <div class="profile-grid">
-      <div>
-        <label for="name">Full Name</label>
-        <input type="text" id="name" name="name" value="{{ user_profile.name or '' }}" disabled>
-      </div>
-      <div>
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" value="{{ user.email }}" disabled>
-      </div>
-      <div>
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" value="{{ user_profile.phone or '' }}" disabled>
-      </div>
-      <div>
-        <label for="status">Status</label>
-        <input type="text" id="status" name="status" value="{{ 'Active' if user_profile.status else 'Inactive' }}" disabled>
-      </div>
-    </div>
+  <div class="profile-item">
+    <label>Email:</label>
+    <span id="profile-email-view"></span>
+    <input type="email" id="profile-email-edit" disabled style="display: none;">
+  </div>
 
-    <div class="profile-footer">
-      <button type="button" class="btn-edit" onclick="enableEditing()">Edit Profile</button>
-    </div>
-  </form>
+  <div class="profile-item">
+    <label>Phone:</label>
+    <span id="profile-phone-view"></span>
+    <input type="text" id="profile-phone-edit" style="display: none;">
+  </div>
+
+  <div class="profile-item">
+    <label>Availability:</label>
+    <span id="profile-availability-view"></span>
+    <select id="profile-availability-edit" style="display: none;">
+      <option value="">Select</option>
+      <option value="Available">Available</option>
+      <option value="Busy">Busy</option>
+      <option value="Unavailable">Unavailable</option>
+    </select>
+  </div>
+
+  <div class="profile-item">
+    <label>Roles:</label>
+    <span id="profile-roles-view"></span>
+  </div>
+
+  <div class="btn-row">
+    <button class="edit-btn" id="editProfileBtn">Edit Profile</button>
+    <button class="save-btn" id="saveProfileBtn" style="display: none;">Save</button>
+    <button class="cancel-btn" id="cancelEditBtn" style="display: none;">Cancel</button>
+  </div>
 </div>
 
 <script>
-  function enableEditing() {
-    const inputs = document.querySelectorAll("#profile-form input");
-    inputs.forEach(input => input.disabled = false);
+  const token = localStorage.getItem("access_token");
+
+  async function loadProfile() {
+    const res = await fetch("/profile", {
+      headers: { Authorization: "Bearer " + token }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+
+      document.getElementById("profile-name-view").textContent = data.name || "-";
+      document.getElementById("profile-email-view").textContent = data.email || "-";
+      document.getElementById("profile-phone-view").textContent = data.phone || "-";
+      document.getElementById("profile-availability-view").textContent = data.availability || "-";
+      document.getElementById("profile-roles-view").textContent = (data.roles || []).join(", ");
+
+      document.getElementById("profile-name-edit").value = data.name || "";
+      document.getElementById("profile-email-edit").value = data.email || "";
+      document.getElementById("profile-phone-edit").value = data.phone || "";
+      document.getElementById("profile-availability-edit").value = data.availability || "";
+    } else {
+      alert("Failed to load profile. Please log in again.");
+      window.location.href = "/login";
+    }
   }
+
+  function toggleEditMode(editing = true) {
+    const viewElems = document.querySelectorAll("[id$='-view']");
+    const editElems = document.querySelectorAll("[id$='-edit']");
+
+    viewElems.forEach(el => el.style.display = editing ? "none" : "block");
+    editElems.forEach(el => el.style.display = editing ? "block" : "none");
+
+    document.getElementById("editProfileBtn").style.display = editing ? "none" : "inline-block";
+    document.getElementById("saveProfileBtn").style.display = editing ? "inline-block" : "none";
+    document.getElementById("cancelEditBtn").style.display = editing ? "inline-block" : "none";
+  }
+
+  document.getElementById("editProfileBtn").addEventListener("click", () => toggleEditMode(true));
+  document.getElementById("cancelEditBtn").addEventListener("click", () => toggleEditMode(false));
+
+  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+    const name = document.getElementById("profile-name-edit").value.trim();
+    const phone = document.getElementById("profile-phone-edit").value.trim();
+    const availability = document.getElementById("profile-availability-edit").value;
+
+    const res = await fetch("/profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ name, phone, availability })
+    });
+
+    if (res.ok) {
+      alert("Profile updated successfully.");
+      toggleEditMode(false);
+      loadProfile();
+    } else {
+      const err = await res.json();
+      alert(err.message || "Failed to update profile.");
+    }
+  });
+
+  window.onload = loadProfile;
 </script>
 {% endblock %}
