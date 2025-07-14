@@ -683,21 +683,20 @@ class ProfileResource(Resource):
         current_user_id = get_jwt_identity()
 
         user = User.query.get(current_user_id)
-        profile = UserProfile.query.filter_by(user_id=current_user_id).first()
-        roles = [ur.role.roles for ur in UserRoles.query.filter_by(user_id=current_user_id).all()]
-
         if not user:
             return {"message": "User not found"}, 404
 
+        profile = user.profile  
+        roles = [ur.role.roles for ur in UserRoles.query.filter_by(user_id=current_user_id).all()]
+
         return {
-            "name": user.name,
             "email": user.email,
-            "phone": profile.phone_no if profile else "",
+            "name": profile.name if profile else "",
+            "phone": profile.phone if profile else "",
             "availability": profile.availability if profile else "",
-            "roles": roles,
-            "created_at": str(user.created_at.date()),
-            "updated_at": str(user.updated_at.date())
+            "roles": roles
         }, 200
+
 
     @jwt_required()
     def put(self):
@@ -708,25 +707,91 @@ class ProfileResource(Resource):
         if not user:
             return {"message": "User not found"}, 404
 
-        profile = UserProfile.query.filter_by(user_id=current_user_id).first()
+        profile = user.profile
         if not profile:
-            profile = UserProfile(user_id=current_user_id)
+            profile = UserProfile(user_id=user.id)
 
-        # Update fields
-        if "name" in data:
-            user.name = data["name"]
-        if "phone" in data:
-            profile.phone_no = data["phone"]
-        if "availability" in data:
-            profile.availability = data["availability"]
+        profile.name = data.get("name", profile.name)
+        profile.phone = data.get("phone", profile.phone)
+        profile.availability = data.get("availability", profile.availability)
 
-        user.updated_at = datetime.utcnow()
-
-        db.session.add(user)
         db.session.add(profile)
         db.session.commit()
 
         return {"message": "Profile updated successfully"}, 200
+    
+class ProjectSummary(Resource):
+    @jwt_required()
+    def get(self, id):
+        current_user_id = get_jwt_identity()
+        project = Project.query.get_or_404(id)
+
+        # Basic info
+        name = project.name
+        description = project.description
+        deadline = project.deadline.strftime('%Y-%m-%d')
+        status = "Completed" if project.status else "In Progress"
+
+        # Team members
+        team_ids = [tp.team_id for tp in TeamProject.query.filter_by(project_id=id).all()]
+        member_ids = db.session.query(TeamMembers.user_id).filter(TeamMembers.team_id.in_(team_ids)).distinct()
+        members = db.session.query(UserProfile.name).filter(UserProfile.user_id.in_(member_ids)).all()
+        team_names = [m.name for m in members if m.name]
+
+        # Task chart values
+        task_stats = db.session.query(Tasks.status, db.func.count(Tasks.id)).filter_by(project_id=id).group_by(Tasks.status).all()
+        task_counts = [0, 0, 0]  # Open, In Progress, Done
+        for status, count in task_stats:
+            if status is False:
+                task_counts[0] += count
+            elif status is None:
+                task_counts[1] += count
+            else:
+                task_counts[2] += count
+
+        # Ticket trend chart
+        ticket_query = db.session.query(
+            db.func.date(Ticket.created_at),
+            Ticket.status,
+            db.func.count(Ticket.id)
+        ).filter_by(project_id=id).group_by(db.func.date(Ticket.created_at), Ticket.status).all()
+
+        ticket_date_map = {}
+        for date, status, count in ticket_query:
+            date_str = date.strftime('%Y-%m-%d')
+            if date_str not in ticket_date_map:
+                ticket_date_map[date_str] = {"created": 0, "resolved": 0}
+            if status:
+                ticket_date_map[date_str]["resolved"] += count
+            else:
+                ticket_date_map[date_str]["created"] += count
+
+        ticket_dates = sorted(ticket_date_map.keys())
+        tickets_created = [ticket_date_map[d]["created"] for d in ticket_dates]
+        tickets_resolved = [ticket_date_map[d]["resolved"] for d in ticket_dates]
+
+        # Activity log
+        activity_log = [{
+            "content": n.content,
+            "type": n.type,
+            "timestamp": n.created_at.strftime('%Y-%m-%d %H:%M')
+        } for n in Notifications.query.order_by(Notifications.id.desc()).limit(5).all()]
+
+        return {
+            "id": project.id,
+            "name": name,
+            "description": description,
+            "deadline": deadline,
+            "status": status,
+            "team": team_names,
+            "task_counts": task_counts,
+            "ticket_dates": ticket_dates,
+            "tickets_created": tickets_created,
+            "tickets_resolved": tickets_resolved,
+            "activities": [f"[{a['timestamp']}] {a['type']} - {a['content']}" for a in activity_log]
+        }, 200
+
+    
 
 
 def seed_notifications(user_id):
@@ -801,9 +866,8 @@ api.add_resource(SprintCreate, "/sprints")
 api.add_resource(SprintList, "/sprints/all")
 api.add_resource(SprintDetail, "/sprints/<int:id>") 
 api.add_resource(Search, "/search/<string:text>")
-api.add_resource(ProfileResource, "/api/profile")
-
-
+api.add_resource(ProfileResource, "/profile_page")
+api.add_resource(ProjectSummary, "/api/projects/<int:id>/summary")
 
 
 @app.route('/')
@@ -813,8 +877,6 @@ def home():
 @app.route('/login')
 def login_page():
     return render_template('login.html')
-
-
 
 
 @app.route('/dashboard')
@@ -834,6 +896,13 @@ def project_page():
 def profile_page():
     return render_template("profile.html")
 
+
+@app.route("/projects/summary")
+def project_summary_page():
+    project_id = request.args.get("id")
+    if not project_id:
+        return "Missing project ID", 400
+    return render_template("project_summary.html", project_id=project_id)
 
 
 if __name__ == "__main__":

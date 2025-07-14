@@ -160,71 +160,87 @@
 </div>
 
 <script>
-  const token = localStorage.getItem("access_token");
+  document.addEventListener("DOMContentLoaded", function () {
+    const token = localStorage.getItem("access_token");
 
-  async function loadProfile() {
-    const res = await fetch("/profile", {
-      headers: { Authorization: "Bearer " + token }
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-
-      document.getElementById("profile-name-view").textContent = data.name || "-";
-      document.getElementById("profile-email-view").textContent = data.email || "-";
-      document.getElementById("profile-phone-view").textContent = data.phone || "-";
-      document.getElementById("profile-availability-view").textContent = data.availability || "-";
-      document.getElementById("profile-roles-view").textContent = (data.roles || []).join(", ");
-
-      document.getElementById("profile-name-edit").value = data.name || "";
-      document.getElementById("profile-email-edit").value = data.email || "";
-      document.getElementById("profile-phone-edit").value = data.phone || "";
-      document.getElementById("profile-availability-edit").value = data.availability || "";
-    } else {
-      alert("Failed to load profile. Please log in again.");
+    if (!token) {
+      alert("You are not logged in.");
       window.location.href = "/login";
+      return;
     }
-  }
 
-  function toggleEditMode(editing = true) {
-    const viewElems = document.querySelectorAll("[id$='-view']");
-    const editElems = document.querySelectorAll("[id$='-edit']");
+    async function loadProfile() {
+      try {
+        const res = await fetch("/profile_page", {
+          headers: {
+            "Authorization": "Bearer " + token
+          }
+        });
 
-    viewElems.forEach(el => el.style.display = editing ? "none" : "block");
-    editElems.forEach(el => el.style.display = editing ? "block" : "none");
+        if (!res.ok) throw new Error("Unauthorized");
 
-    document.getElementById("editProfileBtn").style.display = editing ? "none" : "inline-block";
-    document.getElementById("saveProfileBtn").style.display = editing ? "inline-block" : "none";
-    document.getElementById("cancelEditBtn").style.display = editing ? "inline-block" : "none";
-  }
+        const data = await res.json();
 
-  document.getElementById("editProfileBtn").addEventListener("click", () => toggleEditMode(true));
-  document.getElementById("cancelEditBtn").addEventListener("click", () => toggleEditMode(false));
+        // View values
+        document.getElementById("profile-name-view").textContent = data.name || "-";
+        document.getElementById("profile-email-view").textContent = data.email || "-";
+        document.getElementById("profile-phone-view").textContent = data.phone || "-";
+        document.getElementById("profile-availability-view").textContent = data.availability || "-";
+        document.getElementById("profile-roles-view").textContent = (data.roles || []).join(", ");
 
-  document.getElementById("saveProfileBtn").addEventListener("click", async () => {
-    const name = document.getElementById("profile-name-edit").value.trim();
-    const phone = document.getElementById("profile-phone-edit").value.trim();
-    const availability = document.getElementById("profile-availability-edit").value;
+        // Edit values
+        document.getElementById("profile-name-edit").value = data.name || "";
+        document.getElementById("profile-email-edit").value = data.email || "";
+        document.getElementById("profile-phone-edit").value = data.phone || "";
+        document.getElementById("profile-availability-edit").value = data.availability || "";
+      } catch (err) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "/login";
+      }
+    }
 
-    const res = await fetch("/profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({ name, phone, availability })
+    function toggleEditMode(editing = true) {
+      const viewElems = document.querySelectorAll("[id$='-view']");
+      const editElems = document.querySelectorAll("[id$='-edit']");
+
+      viewElems.forEach(el => el.style.display = editing ? "none" : "block");
+      editElems.forEach(el => el.style.display = editing ? "block" : "none");
+
+      document.getElementById("editProfileBtn").style.display = editing ? "none" : "inline-block";
+      document.getElementById("saveProfileBtn").style.display = editing ? "inline-block" : "none";
+      document.getElementById("cancelEditBtn").style.display = editing ? "inline-block" : "none";
+    }
+
+    document.getElementById("editProfileBtn").addEventListener("click", () => toggleEditMode(true));
+    document.getElementById("cancelEditBtn").addEventListener("click", () => toggleEditMode(false));
+
+    document.getElementById("saveProfileBtn").addEventListener("click", async () => {
+      const name = document.getElementById("profile-name-edit").value.trim();
+      const phone = document.getElementById("profile-phone-edit").value.trim();
+      const availability = document.getElementById("profile-availability-edit").value;
+
+      const res = await fetch("/profile_page", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ name, phone, availability })
+      });
+
+      if (res.ok) {
+        alert("Profile updated successfully.");
+        toggleEditMode(false);
+        loadProfile();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to update profile.");
+      }
     });
 
-    if (res.ok) {
-      alert("Profile updated successfully.");
-      toggleEditMode(false);
-      loadProfile();
-    } else {
-      const err = await res.json();
-      alert(err.message || "Failed to update profile.");
-    }
+    loadProfile();
   });
-
-  window.onload = loadProfile;
 </script>
+
+
 {% endblock %}

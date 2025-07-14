@@ -11,7 +11,7 @@
 
   .project-sidebar {
     position: fixed;
-    top: 60px; /* below topbar */
+    top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
@@ -46,7 +46,6 @@
     width: calc(100% - 240px);
   }
 
-  /* Shared styles reused from dashboard look */
   .section-title {
     font-size: 1.8rem;
     font-weight: 700;
@@ -144,14 +143,11 @@
   }
 </style>
 
-<!-- LAYOUT -->
 <div class="project-layout">
-
-  <!-- SIDEBAR -->
   <div class="project-sidebar">
     <h4>Navigation</h4>
     <a href="/dashboard">Dashboard</a>
-    <a href="/projects-page">Projects</a>
+    <a href="/projects">Projects</a>
     <a href="/teams">Teams</a>
     <a href="/tickets">Tickets</a>
     <a href="/sprints">Sprints</a>
@@ -159,11 +155,9 @@
     <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
   </div>
 
-  <!-- MAIN CONTENT -->
   <div class="project-main">
     <h2 class="section-title">Project Management</h2>
 
-    <!-- Project Form -->
     <form id="projectForm">
       <div class="form-group">
         <label for="name">Project Name</label>
@@ -180,7 +174,6 @@
       <button type="submit" class="btn-submit">Create Project</button>
     </form>
 
-    <!-- Project List -->
     <table class="project-table" id="projectTable">
       <thead>
         <tr>
@@ -199,13 +192,12 @@
 </div>
 
 <script>
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-  alert("Please login first.");
-  window.location.href = "/login";
-}
+  const token = localStorage.getItem("access_token");
+  if (!token) {
+    alert("Please login first.");
+    window.location.href = "/login";
+  }
 
-  // Submit project
   document.getElementById("projectForm").addEventListener("submit", async function (e) {
     e.preventDefault();
     const name = document.getElementById("name").value.trim();
@@ -250,10 +242,10 @@
     data.forEach(p => {
       const row = `
         <tr>
-          <td>${p.name}</td>
+          <td><a href="/projects/summary?id=${p.id}" style="color: #0052cc; font-weight: 600; text-decoration: underline;">${p.name}</a></td>
           <td>${p.description}</td>
           <td>${p.deadline}</td>
-          <td>${p.status}</td>
+          <td>${p.status ? "Completed" : "In Progress"}</td>
           <td>
             <button class="btn-action btn-edit" disabled>Edit</button>
             <button class="btn-action btn-delete" disabled>Delete</button>
@@ -264,12 +256,12 @@
     });
   }
 
-  window.onload = loadProjects;
-
   function logout() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_info");
     window.location.href = "/";
   }
+
+  window.onload = loadProjects;
 </script>
 {% endblock %}
