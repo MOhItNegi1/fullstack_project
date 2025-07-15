@@ -682,43 +682,36 @@ class ProfileResource(Resource):
     def get(self):
         current_user_id = get_jwt_identity()
 
-        user = User.query.get(current_user_id)
-        if not user:
+        user = User.query.filter_by(id=current_user_id).first()
+        if not user or not user.profile:
             return {"message": "User not found"}, 404
 
-        profile = user.profile  
-        roles = [ur.role.roles for ur in UserRoles.query.filter_by(user_id=current_user_id).all()]
+        roles = db.session.query(Role.roles).join(UserRoles).filter(UserRoles.user_id == current_user_id).all()
 
         return {
             "email": user.email,
-            "name": profile.name if profile else "",
-            "phone": profile.phone if profile else "",
-            "availability": profile.availability if profile else "",
-            "roles": roles
+            "name": user.profile.name,
+            "phone": user.profile.phone,
+            "availability": user.profile.status,
+            "roles": [r[0] for r in roles]
         }, 200
-
 
     @jwt_required()
     def put(self):
         current_user_id = get_jwt_identity()
         data = request.get_json()
 
-        user = User.query.get(current_user_id)
-        if not user:
-            return {"message": "User not found"}, 404
-
-        profile = user.profile
+        profile = UserProfile.query.filter_by(user_id=current_user_id).first()
         if not profile:
-            profile = UserProfile(user_id=user.id)
+            return {"message": "Profile not found"}, 404
 
         profile.name = data.get("name", profile.name)
         profile.phone = data.get("phone", profile.phone)
-        profile.availability = data.get("availability", profile.availability)
+        profile.status = data.get("availability", profile.status)
 
-        db.session.add(profile)
         db.session.commit()
+        return {"message": "Profile updated"}, 200
 
-        return {"message": "Profile updated successfully"}, 200
     
 class ProjectSummary(Resource):
     @jwt_required()
@@ -792,6 +785,131 @@ class ProjectSummary(Resource):
         }, 200
 
     
+class TeamCreate(Resource):
+    @jwt_required()
+    @role_required(["admin", "manager"])
+    def post(self):
+        data = request.get_json()
+        team = Team(name=data['name'])
+        db.session.add(team)
+        db.session.flush()  # Get team.id
+
+        for uid in data.get('member_ids', []):
+            db.session.add(TeamMembers(user_id=uid, team_id=team.id))
+            create_notification(uid, "Team Invitation", f"You have been added to team {team.name}")
+
+        db.session.commit()
+        return {"message": "Team created successfully", "team_id": team.id}, 201
+
+class TeamList(Resource):
+    @jwt_required()
+    def get(self):
+        try:
+            teams = Team.query.all()
+            users = User.query.all()
+            projects = Project.query.all()
+
+            team_data = []
+            for team in teams:
+                members = [
+                    member.user.profile.name
+                    for member in team.members
+                    if member.user and member.user.profile and member.user.profile.name
+                ]
+                project_names = [
+                    tp.project.name
+                    for tp in team.projects
+                    if tp.project and tp.project.name
+                ]
+                team_data.append({
+                    "id": team.id,
+                    "name": team.name,
+                    "members": members,
+                    "projects": project_names
+                })
+
+            # Extra users list for dropdowns
+            user_data = [
+                {
+                    "id": user.id,
+                    "name": user.profile.name if user.profile else user.email
+                }
+                for user in users
+            ]
+
+            project_data = [
+                {
+                    "id": p.id,
+                    "name": p.name
+                }
+                for p in projects
+            ]
+
+            return {
+                "teams": team_data,
+                "users": user_data,
+                "projects": project_data
+            }, 200
+
+        except Exception as e:
+            print("Error in TeamList:", str(e))
+            return {"message": "Internal server error"}, 500
+
+
+class AddTeamMembers(Resource):
+    @jwt_required()
+    @role_required(["admin", "manager"])
+    def put(self, id):
+        data = request.get_json()
+        team = Team.query.get_or_404(id)
+        new_ids = data.get("member_ids", [])
+
+        for uid in new_ids:
+            if not TeamMembers.query.filter_by(user_id=uid, team_id=team.id).first():
+                db.session.add(TeamMembers(user_id=uid, team_id=team.id))
+                create_notification(uid, "Team Invitation", f"You've been added to team {team.name}")
+
+        db.session.commit()
+        return {"message": "Team members updated successfully"}
+
+
+class AssignTeamToProject(Resource):
+    @jwt_required()
+    @role_required(["admin", "manager"])
+    def post(self, id):
+        data = request.get_json()
+        project_id = data.get("project_id")
+        if not Project.query.get(project_id):
+            return {"message": "Project not found"}, 404
+
+        if TeamProject.query.filter_by(team_id=id, project_id=project_id).first():
+            return {"message": "Team already assigned to this project"}, 400
+
+        tp = TeamProject(team_id=id, project_id=project_id)
+        db.session.add(tp)
+        db.session.commit()
+        return {"message": "Team assigned to project"}, 201
+
+class DeleteTeam(Resource):
+    @jwt_required()
+    @role_required(["admin", "manager"])
+    def delete(self, id):
+        team = Team.query.get_or_404(id)
+
+        # Remove team members
+        TeamMembers.query.filter_by(team_id=team.id).delete()
+
+        # Remove team-project assignments
+        TeamProject.query.filter_by(team_id=team.id).delete()
+
+        # Optionally remove tasks assigned to the team (optional)
+        Tasks.query.filter_by(team_id=team.id).delete()
+
+        # Delete the team
+        db.session.delete(team)
+        db.session.commit()
+
+        return {"message": "Team deleted successfully"}, 200
 
 
 def seed_notifications(user_id):
@@ -853,7 +971,7 @@ api.add_resource(Login,"/login_data")        #post
 api.add_resource(ProjectCreate, "/projects")   #post
 api.add_resource(ProjectList, "/projects/all")   #get 
 api.add_resource(ProjectDetail, "/projects/<int:id>")  #get, put, delete
-api.add_resource(GenerateTicket, "/tickets")           #post
+api.add_resource(GenerateTicket, "/tickets")           
 api.add_resource(TicketList, "/tickets/all")
 api.add_resource(TicketDetail, "/tickets/<int:id>")
 api.add_resource(TaskCreate, "/tasks")
@@ -868,6 +986,12 @@ api.add_resource(SprintDetail, "/sprints/<int:id>")
 api.add_resource(Search, "/search/<string:text>")
 api.add_resource(ProfileResource, "/profile_page")
 api.add_resource(ProjectSummary, "/api/projects/<int:id>/summary")
+api.add_resource(TeamCreate, "/teams")
+api.add_resource(TeamList, "/teams/all")
+api.add_resource(AddTeamMembers, "/teams/<int:id>/members")
+api.add_resource(AssignTeamToProject, "/teams/<int:id>/assign_project")
+api.add_resource(DeleteTeam, "/teams/<int:id>")
+
 
 
 @app.route('/')
@@ -903,6 +1027,10 @@ def project_summary_page():
     if not project_id:
         return "Missing project ID", 400
     return render_template("project_summary.html", project_id=project_id)
+
+@app.route('/teams')
+def team_page():
+    return render_template('teams.html')
 
 
 if __name__ == "__main__":

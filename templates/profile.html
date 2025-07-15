@@ -1,246 +1,128 @@
-{% extends "base.html" %}
-{% block title %}Profile - Jira{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Page</title>
+  <!-- Bootstrap CSS CDN -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+</head>
+<body class="bg-light">
 
-{% block content %}
-<style>
-  .profile-container {
-    max-width: 700px;
-    margin: 2rem auto;
-    padding: 2.5rem;
-    background: #ffffff;
-    border: 1px solid #e0e6ed;
-    border-radius: 10px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-    animation: fadeIn 0.5s ease;
-  }
+  <div class="container mt-5">
+    <div class="card shadow-lg rounded-4">
+      <div class="card-header bg-primary text-white">
+        <h3 class="mb-0">My Profile</h3>
+      </div>
+      <div class="card-body">
+        <!-- Display Section -->
+        <div id="profile-info" class="mb-4">
+          <p><strong>Email:</strong> <span id="email"></span></p>
+          <p><strong>Name:</strong> <span id="name"></span></p>
+          <p><strong>Phone:</strong> <span id="phone"></span></p>
+          <p><strong>Availability:</strong> <span id="availability"></span></p>
+          <p><strong>Roles:</strong> <span id="roles"></span></p>
+        </div>
 
-  .profile-container h2 {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #0052cc;
-    font-size: 1.8rem;
-  }
+        <hr>
 
-  .profile-item {
-    margin-bottom: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    animation: slideIn 0.4s ease;
-  }
+        <!-- Edit Form -->
+        <h5 class="mb-3">Edit Profile</h5>
+        <form id="edit-form">
+          <div class="mb-3">
+            <label for="edit-name" class="form-label">Name</label>
+            <input type="text" id="edit-name" class="form-control" />
+          </div>
 
-  .profile-item label {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.5rem;
-  }
+          <div class="mb-3">
+            <label for="edit-phone" class="form-label">Phone</label>
+            <input type="text" id="edit-phone" class="form-control" maxlength="10" />
+          </div>
 
-  .profile-item span,
-  .profile-item input,
-  .profile-item select {
-    font-size: 1rem;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #d0d7e2;
-    background-color: #f9f9f9;
-    transition: box-shadow 0.3s ease;
-  }
+          <div class="form-check form-switch mb-3">
+            <input type="checkbox" class="form-check-input" id="edit-availability" />
+            <label class="form-check-label" for="edit-availability">Available</label>
+          </div>
 
-  .profile-item input:focus,
-  .profile-item select:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.2);
-  }
-
-  .profile-item span {
-    background-color: #f1f4f8;
-  }
-
-  .btn-row {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  .edit-btn,
-  .save-btn,
-  .cancel-btn {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-
-  .edit-btn {
-    background-color: #0052cc;
-    color: white;
-  }
-
-  .edit-btn:hover {
-    background-color: #0041a8;
-    transform: translateY(-1px);
-  }
-
-  .save-btn {
-    background-color: #28a745;
-    color: white;
-  }
-
-  .save-btn:hover {
-    background-color: #218838;
-    transform: translateY(-1px);
-  }
-
-  .cancel-btn {
-    background-color: #6c757d;
-    color: white;
-  }
-
-  .cancel-btn:hover {
-    background-color: #5a6268;
-    transform: translateY(-1px);
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-</style>
-
-<div class="profile-container" id="profileContent">
-  <h2>User Profile</h2>
-
-  <div class="profile-item">
-    <label>Name:</label>
-    <span id="profile-name-view"></span>
-    <input type="text" id="profile-name-edit" style="display: none;">
+          <button type="submit" class="btn btn-success">Update Profile</button>
+        </form>
+      </div>
+    </div>
   </div>
 
-  <div class="profile-item">
-    <label>Email:</label>
-    <span id="profile-email-view"></span>
-    <input type="email" id="profile-email-edit" disabled style="display: none;">
-  </div>
+  <!-- Bootstrap JS (Optional) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+  ></script>
 
-  <div class="profile-item">
-    <label>Phone:</label>
-    <span id="profile-phone-view"></span>
-    <input type="text" id="profile-phone-edit" style="display: none;">
-  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert("Session expired. Please login again.");
+        window.location.href = "/login";
+        return;
+      }
 
-  <div class="profile-item">
-    <label>Availability:</label>
-    <span id="profile-availability-view"></span>
-    <select id="profile-availability-edit" style="display: none;">
-      <option value="">Select</option>
-      <option value="Available">Available</option>
-      <option value="Busy">Busy</option>
-      <option value="Unavailable">Unavailable</option>
-    </select>
-  </div>
+      fetch("/profile_page", {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch profile");
+          return res.json();
+        })
+        .then((data) => {
+          // Display values
+          document.getElementById("email").textContent = data.email;
+          document.getElementById("name").textContent = data.name || "N/A";
+          document.getElementById("phone").textContent = data.phone || "N/A";
+          document.getElementById("availability").textContent =
+            data.availability ? "Available" : "Unavailable";
+          document.getElementById("roles").textContent = data.roles.join(", ");
 
-  <div class="profile-item">
-    <label>Roles:</label>
-    <span id="profile-roles-view"></span>
-  </div>
-
-  <div class="btn-row">
-    <button class="edit-btn" id="editProfileBtn">Edit Profile</button>
-    <button class="save-btn" id="saveProfileBtn" style="display: none;">Save</button>
-    <button class="cancel-btn" id="cancelEditBtn" style="display: none;">Cancel</button>
-  </div>
-</div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      alert("You are not logged in.");
-      window.location.href = "/login";
-      return;
-    }
-
-    async function loadProfile() {
-      try {
-        const res = await fetch("/profile_page", {
-          headers: {
-            "Authorization": "Bearer " + token
-          }
+          // Prefill form
+          document.getElementById("edit-name").value = data.name || "";
+          document.getElementById("edit-phone").value = data.phone || "";
+          document.getElementById("edit-availability").checked = data.availability;
+        })
+        .catch((err) => {
+          alert(err.message);
         });
 
-        if (!res.ok) throw new Error("Unauthorized");
+      // Submit edit form
+      document.getElementById("edit-form").addEventListener("submit", function (e) {
+        e.preventDefault();
 
-        const data = await res.json();
+        const name = document.getElementById("edit-name").value;
+        const phone = document.getElementById("edit-phone").value;
+        const availability = document.getElementById("edit-availability").checked;
 
-        // View values
-        document.getElementById("profile-name-view").textContent = data.name || "-";
-        document.getElementById("profile-email-view").textContent = data.email || "-";
-        document.getElementById("profile-phone-view").textContent = data.phone || "-";
-        document.getElementById("profile-availability-view").textContent = data.availability || "-";
-        document.getElementById("profile-roles-view").textContent = (data.roles || []).join(", ");
-
-        // Edit values
-        document.getElementById("profile-name-edit").value = data.name || "";
-        document.getElementById("profile-email-edit").value = data.email || "";
-        document.getElementById("profile-phone-edit").value = data.phone || "";
-        document.getElementById("profile-availability-edit").value = data.availability || "";
-      } catch (err) {
-        alert("Session expired. Please log in again.");
-        window.location.href = "/login";
-      }
-    }
-
-    function toggleEditMode(editing = true) {
-      const viewElems = document.querySelectorAll("[id$='-view']");
-      const editElems = document.querySelectorAll("[id$='-edit']");
-
-      viewElems.forEach(el => el.style.display = editing ? "none" : "block");
-      editElems.forEach(el => el.style.display = editing ? "block" : "none");
-
-      document.getElementById("editProfileBtn").style.display = editing ? "none" : "inline-block";
-      document.getElementById("saveProfileBtn").style.display = editing ? "inline-block" : "none";
-      document.getElementById("cancelEditBtn").style.display = editing ? "inline-block" : "none";
-    }
-
-    document.getElementById("editProfileBtn").addEventListener("click", () => toggleEditMode(true));
-    document.getElementById("cancelEditBtn").addEventListener("click", () => toggleEditMode(false));
-
-    document.getElementById("saveProfileBtn").addEventListener("click", async () => {
-      const name = document.getElementById("profile-name-edit").value.trim();
-      const phone = document.getElementById("profile-phone-edit").value.trim();
-      const availability = document.getElementById("profile-availability-edit").value;
-
-      const res = await fetch("/profile_page", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify({ name, phone, availability })
+        fetch("/profile_page", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ name, phone, availability }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to update profile");
+            return res.json();
+          })
+          .then((data) => {
+            alert("Profile updated successfully!");
+            window.location.reload();
+          })
+          .catch((err) => {
+            alert(err.message);
+          });
       });
-
-      if (res.ok) {
-        alert("Profile updated successfully.");
-        toggleEditMode(false);
-        loadProfile();
-      } else {
-        const err = await res.json();
-        alert(err.message || "Failed to update profile.");
-      }
     });
-
-    loadProfile();
-  });
-</script>
-
-
-{% endblock %}
+  </script>
+</body>
+</html>
