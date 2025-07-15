@@ -106,17 +106,49 @@
       color: white;
       border: none;
     }
+
+    .dark-mode {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+}
+
+.dark-mode .dashboard-sidebar,
+.dark-mode .dashboard-main,
+.dark-mode table,
+.dark-mode .widget {
+  background-color: #2c2c2c;
+  color: #fff;
+}
+
+.dark-mode th {
+  background-color: #3a3a3a;
+  color: #fff;
+}
+
+.dark-mode a {
+  color: #90caf9;
+}
+
+.dark-mode .modal-content {
+  background-color: #2b2b2b;
+  color: #ffffff;
+}
   </style>
 </head>
 
 <body>
   <!-- HEADER BAR -->
   <header class="topbar">
+    
     <div class="topbar-content">
       <i class="fab fa-jira"></i>
       <span>Jira</span>
     </div>
+    <button id="theme-toggle" onclick="toggleTheme()" style="margin-left:auto; padding: 6px 10px; border-radius: 6px; cursor:pointer;">
+  🌙
+</button>
     <div id="auth-buttons"></div>
+
   </header>
 
   <!-- MAIN -->
@@ -179,8 +211,31 @@
       window.location.href = "/";
     };
   });
+
+function toggleTheme() {
+  const body = document.body;
+  const current = localStorage.getItem("theme");
+
+  if (current === "dark") {
+    body.classList.remove("dark-mode");
+    localStorage.setItem("theme", "light");
+    document.getElementById("theme-toggle").textContent = "🌙";
+  } else {
+    body.classList.add("dark-mode");
+    localStorage.setItem("theme", "dark");
+    document.getElementById("theme-toggle").textContent = "☀️";
+  }
+}
+
+window.onload = () => {
+  const theme = localStorage.getItem("theme");
+  if (theme === "dark") {
+    document.body.classList.add("dark-mode");
+    const btn = document.getElementById("theme-toggle");
+    if (btn) btn.textContent = "☀️";
+  }
+};
 </script>
 
- 
 </body>
 </html>

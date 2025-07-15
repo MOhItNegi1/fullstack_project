@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Tickets - JIRA{% endblock %}
+{% block content %}
+<style>
+  body {
+    background-color: #f4f6fa;
+  }
+
+  .ticket-container {
+    padding: 2rem;
+    margin-left: 240px;
+  }
+
+  h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  th, td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e0e6ed;
+    text-align: left;
+  }
+
+  th {
+    background: #e8eef7;
+    font-weight: 600;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .action-btns button {
+    margin-right: 5px;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 1.5rem;
+    width: 500px;
+    border-radius: 8px;
+  }
+
+  .modal-content label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  .modal-content input,
+  .modal-content select {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 5px;
+  }
+
+  .modal-close {
+    float: right;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 20px;
+  }
+
+</style>
+
+<div class="ticket-container">
+  <h2>Tickets</h2>
+  <div id="error-msg" style="color:red; font-weight: bold;"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Due Date</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="ticket-tbody">
+      <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal" id="editModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('editModal')">&times;</span>
+    <h3>Edit Ticket</h3>
+
+    <input type="hidden" id="edit-id" />
+
+    <label>Title</label>
+    <input type="text" id="edit-title" />
+
+    <label>Priority</label>
+    <select id="edit-priority">
+      <option value="Low">Low</option>
+      <option value="Medium">Medium</option>
+      <option value="High">High</option>
+    </select>
+
+    <label>Status</label>
+    <select id="edit-status">
+      <option value="false">Open</option>
+      <option value="true">Closed</option>
+    </select>
+
+    <label>Due Date</label>
+    <input type="date" id="edit-due" />
+
+    <br/><br/>
+    <button onclick="submitEdit()">Save</button>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+
+function requireAuth() {
+  if (!token) {
+    window.location.href = "/login";
+    return null;
+  }
+  return token;
+}
+
+function openModal(id) {
+  document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = "none";
+}
+
+async function loadTickets() {
+  const headers = { Authorization: "Bearer " + requireAuth() };
+
+  try {
+    const res = await fetch("/tickets/all", { headers });
+    if (!res.ok) throw new Error("Unauthorized or expired session.");
+    const data = await res.json();
+
+    const tbody = document.getElementById("ticket-tbody");
+    tbody.innerHTML = "";
+
+    data.forEach(ticket => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${ticket.id}</td>
+        <td>${ticket.title}</td>
+        <td>${ticket.status ? "Closed" : "Open"}</td>
+        <td>${ticket.priority}</td>
+        <td>${ticket.due_date}</td>
+        <td class="action-btns">
+          <button onclick="editTicket(${ticket.id})">Edit</button>
+          <button onclick="deleteTicket(${ticket.id})" style="color:red;">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    document.getElementById("error-msg").textContent = err.message;
+  }
+}
+
+async function editTicket(id) {
+  const headers = { Authorization: "Bearer " + requireAuth() };
+  const res = await fetch(`/tickets/${id}`, { headers });
+  const data = await res.json();
+
+  document.getElementById("edit-id").value = data.id;
+  document.getElementById("edit-title").value = data.title;
+  document.getElementById("edit-priority").value = data.priority;
+  document.getElementById("edit-status").value = data.status.toString();
+  document.getElementById("edit-due").value = data.due_date;
+
+  openModal("editModal");
+}
+
+async function submitEdit() {
+  const id = document.getElementById("edit-id").value;
+  const headers = {
+    Authorization: "Bearer " + requireAuth(),
+    "Content-Type": "application/json"
+  };
+
+  const body = JSON.stringify({
+    title: document.getElementById("edit-title").value,
+    priority: document.getElementById("edit-priority").value,
+    status: document.getElementById("edit-status").value === "true",
+    due_date: document.getElementById("edit-due").value
+  });
+
+  const res = await fetch(`/tickets/${id}`, {
+    method: "PUT",
+    headers,
+    body
+  });
+
+  if (res.ok) {
+    closeModal("editModal");
+    loadTickets();
+  } else {
+    alert("Failed to update ticket.");
+  }
+}
+
+async function deleteTicket(id) {
+  if (!confirm("Are you sure you want to delete this ticket?")) return;
+
+  const res = await fetch(`/tickets/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + requireAuth() }
+  });
+
+  const result = await res.json();
+
+  if (res.ok) {
+    loadTickets();
+  } else {
+    alert(result.message || "You are not allowed to delete this ticket.");
+  }
+}
+
+window.onload = loadTickets;
+</script>
+{% endblock %}

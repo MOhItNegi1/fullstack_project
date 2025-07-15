@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Projects - Jira{% endblock %}
-
 {% block content %}
+
+<!-- FontAwesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
 <style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+  }
+
   .project-layout {
     display: flex;
     min-height: 100vh;
@@ -15,29 +22,30 @@
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background-color: #fff;
-    border-right: 1px solid #e2e8f0;
+    background-color: #1a202c;
+    color: #fff;
     padding: 1.5rem 1rem;
     z-index: 1000;
+    transition: transform 0.3s ease;
   }
 
   .project-sidebar h4 {
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
   }
 
   .project-sidebar a {
     display: block;
-    margin-bottom: 1rem;
-    color: #333;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
     font-weight: 500;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: color 0.3s;
   }
 
   .project-sidebar a:hover {
-    color: #0052cc;
+    color: #63b3ed;
   }
 
   .project-main {
@@ -47,40 +55,48 @@
   }
 
   .section-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
-    color: #172b4d;
+    color: #2d3748;
+  }
+
+  .form-card {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
   }
 
   .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 1.2rem;
   }
 
   .form-group label {
-    display: block;
     font-weight: 600;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
+    display: block;
   }
 
   .form-group input,
   .form-group textarea {
     width: 100%;
-    padding: 0.6rem;
+    padding: 0.7rem;
     border: 1px solid #ccc;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 1rem;
     transition: border-color 0.2s ease;
   }
 
   .form-group input:focus,
   .form-group textarea:focus {
-    border-color: #0052cc;
+    border-color: #3182ce;
     outline: none;
   }
 
   .btn-submit {
-    background-color: #0052cc;
+    background-color: #3182ce;
     color: white;
     padding: 0.7rem 1.5rem;
     border: none;
@@ -91,88 +107,87 @@
   }
 
   .btn-submit:hover {
-    background-color: #0041a8;
+    background-color: #2b6cb0;
   }
 
   .project-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 2rem;
     background-color: white;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   .project-table th,
   .project-table td {
-    padding: 0.9rem 1rem;
+    padding: 1rem;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #edf2f7;
   }
 
   .project-table th {
-    background-color: #f4f6fa;
-    font-weight: 600;
-    color: #333;
+    background-color: #f7fafc;
+    color: #4a5568;
   }
 
   .project-table tr:hover {
-    background-color: #f0f4ff;
-    transition: background-color 0.2s ease;
+    background-color: #ebf8ff;
   }
 
   .btn-action {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     padding: 0.4rem 0.8rem;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     border: none;
     font-weight: 500;
+    margin-right: 0.5rem;
   }
 
   .btn-edit {
-    background-color: #e7f0ff;
-    color: #0052cc;
-    margin-right: 0.4rem;
+    background-color: #e2e8f0;
+    color: #2b6cb0;
   }
 
   .btn-delete {
-    background-color: #ffebeb;
-    color: #cc0000;
+    background-color: #fed7d7;
+    color: #c53030;
   }
 </style>
 
 <div class="project-layout">
   <div class="project-sidebar">
-    <h4>Navigation</h4>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/projects">Projects</a>
-    <a href="/teams">Teams</a>
-    <a href="/tickets">Tickets</a>
-    <a href="/sprints">Sprints</a>
-    <a href="/notifications">Notifications</a>
-    <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
+    <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+    <a href="/dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <a href="/projects"><i class="fa-solid fa-folder-open"></i> Projects</a>
+    <a href="/teams"><i class="fa-solid fa-users"></i> Teams</a>
+    <a href="/tickets"><i class="fa-solid fa-ticket"></i> Tickets</a>
+    <a href="/sprints"><i class="fa-solid fa-bolt"></i> Sprints</a>
+    <a href="/notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
+    <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
   </div>
 
   <div class="project-main">
-    <h2 class="section-title">Project Management</h2>
+    <h2 class="section-title">📁 Projects</h2>
 
-    <form id="projectForm">
-      <div class="form-group">
-        <label for="name">Project Name</label>
-        <input type="text" id="name" required />
-      </div>
-      <div class="form-group">
-        <label for="deadline">Deadline</label>
-        <input type="date" id="deadline" required />
-      </div>
-      <div class="form-group">
-        <label for="description">Description</label>
-        <textarea id="description" rows="3"></textarea>
-      </div>
-      <button type="submit" class="btn-submit">Create Project</button>
-    </form>
+    <div class="form-card">
+      <form id="projectForm">
+        <div class="form-group">
+          <label for="name">Project Name</label>
+          <input type="text" id="name" required />
+        </div>
+        <div class="form-group">
+          <label for="deadline">Deadline</label>
+          <input type="date" id="deadline" required />
+        </div>
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn-submit"><i class="fa-solid fa-plus"></i> Create Project</button>
+      </form>
+    </div>
 
     <table class="project-table" id="projectTable">
       <thead>
@@ -214,6 +229,7 @@
     });
 
     const data = await res.json();
+
     if (res.ok) {
       alert("Project created successfully!");
       document.getElementById("projectForm").reset();
@@ -242,13 +258,13 @@
     data.forEach(p => {
       const row = `
         <tr>
-          <td><a href="/projects/summary?id=${p.id}" style="color: #0052cc; font-weight: 600; text-decoration: underline;">${p.name}</a></td>
+          <td><a href="/projects/summary?id=${p.id}" style="color:#2b6cb0; font-weight:600;">${p.name}</a></td>
           <td>${p.description}</td>
           <td>${p.deadline}</td>
-          <td>${p.status ? "Completed" : "In Progress"}</td>
+          <td>${p.status ? "✅ Completed" : "🕒 In Progress"}</td>
           <td>
-            <button class="btn-action btn-edit" disabled>Edit</button>
-            <button class="btn-action btn-delete" disabled>Delete</button>
+            <button class="btn-action btn-edit" disabled><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-action btn-delete" disabled><i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>
       `;
@@ -264,4 +280,5 @@
 
   window.onload = loadProjects;
 </script>
+
 {% endblock %}
