@@ -3,7 +3,7 @@
 
 {% block content %}
 <style>
-  /* Styles for main layout and sidebar (copied from kanban.html for consistency) */
+  /* Consistent styling from other pages */
   .main-layout {
     display: flex;
     min-height: 100vh;
@@ -12,11 +12,11 @@
 
   .sidebar {
     position: fixed;
-    top: 60px; /* below the header */
+    top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background: #1a202c; /* Dark background for sidebar */
+    background: #1a202c;
     color: #fff;
     padding: 1.5rem 1rem;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
@@ -30,12 +30,13 @@
   }
 
   .sidebar a {
-    display: block;
+    display: flex;
+    align-items: center;
     margin-bottom: 1.2rem;
     color: #cbd5e0;
     font-weight: 500;
     text-decoration: none;
-    transition: color 0.3s;
+    transition: color 0.3s, background-color 0.3s;
     padding: 0.5rem 1rem;
     border-radius: 6px;
   }
@@ -45,6 +46,11 @@
     background-color: #2d3748;
   }
   
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
   .sidebar a i {
     margin-right: 0.8rem;
     width: 20px;
@@ -52,7 +58,7 @@
   }
 
   .main-content-area {
-    margin-left: 240px; /* Accounts for fixed sidebar */
+    margin-left: 240px;
     width: calc(100% - 240px);
     padding: 2rem;
   }
@@ -62,7 +68,7 @@
     margin-bottom: 1.5rem;
   }
 
-  .teams-actions {
+  .actions-bar {
     margin-bottom: 1.5rem;
   }
 
@@ -75,6 +81,7 @@
       display: inline-block;
       border: none;
       margin-right: 0.5rem;
+      transition: background-color 0.2s ease;
   }
 
   .btn-primary {
@@ -133,13 +140,14 @@
       padding: 0.4rem 0.8rem;
       font-size: 0.9rem;
   }
-
+  
   .error {
     color: #de350b;
     margin-top: 1rem;
     background-color: #ffeded;
     padding: 1rem;
     border-radius: 6px;
+    display: none; /* Hidden by default */
   }
 
   .modal {
@@ -206,23 +214,23 @@
     <!-- Sidebar Navigation -->
     <div class="sidebar">
       <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
-      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
-      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
-      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
-      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
-      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
-      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
       <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
     </div>
 
     <!-- Main Teams Section -->
     <div class="main-content-area">
       <h2>Team Management</h2>
-      <div class="teams-actions">
+      <div class="actions-bar" data-role="manager-admin">
         <button class="btn btn-primary" onclick="openModal('createTeamModal')"><i class="fa-solid fa-plus"></i> Create Team</button>
       </div>
-      <div class="error" id="error-msg" style="display:none;"></div>
+      <div class="error" id="error-msg"></div>
 
       <table>
         <thead>
@@ -230,7 +238,7 @@
             <th>Team Name</th>
             <th>Members</th>
             <th>Epics</th>
-            <th>Actions</th>
+            <th data-role="manager-admin">Actions</th>
           </tr>
         </thead>
         <tbody id="teams-tbody">
@@ -290,6 +298,11 @@
 
 <script>
 let selectedTeamId = null;
+const token = localStorage.getItem("access_token");
+const userInfo = JSON.parse(localStorage.getItem('user_info'));
+const userRoles = userInfo ? userInfo.roles : [];
+const isManager = userRoles.includes('manager');
+const isAdmin = userRoles.includes('admin');
 
 function logout() {
   localStorage.removeItem('access_token');
@@ -298,7 +311,6 @@ function logout() {
 }
 
 function requireAuth() {
-  const token = localStorage.getItem('access_token');
   if (!token) {
     window.location.href = '{{ url_for("login_page") }}';
     return null;
@@ -306,19 +318,19 @@ function requireAuth() {
   return token;
 }
 
-function openModal(id) {
-  document.getElementById(id).style.display = 'flex';
-}
-
-function closeModal(id) {
-  document.getElementById(id).style.display = 'none';
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function showError(message) {
+    const errorDiv = document.getElementById("error-msg");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
 }
 
 async function loadTeamsAndDropdowns() {
-  const token = requireAuth();
-  if (!token) return;
+  const auth_token = requireAuth();
+  if (!auth_token) return;
   
-  const headers = { 'Authorization': 'Bearer ' + token };
+  const headers = { 'Authorization': 'Bearer ' + auth_token };
 
   try {
     const res = await fetch('/api/teams/all', { headers });
@@ -332,75 +344,72 @@ async function loadTeamsAndDropdowns() {
     const users = data.users || [];
     const epics = data.epics || [];
 
-    // Load teams into table
     const tbody = document.getElementById("teams-tbody");
     tbody.innerHTML = "";
     
     if (teams.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2rem;">No teams found. Create a team to get started.</td></tr>`;
+        const colspan = (isManager || isAdmin) ? 4 : 3;
+        tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 2rem;">No teams found.</td></tr>`;
     } else {
         teams.forEach(team => {
           const tr = document.createElement("tr");
-          
-          // *** FIX START: Correctly map member objects to names before joining ***
           const memberNames = team.members.map(member => member.name).join(", ");
-          // *** FIX END ***
+          
+          let actionsHtml = '';
+          if (isManager || isAdmin) {
+              actionsHtml = `
+                <td>
+                  <button class="btn btn-secondary" onclick="showAssignEpic(${team.id})">Assign Epic</button>
+                  <button class="btn btn-secondary" onclick="showAddMembers(${team.id})">Add Members</button>
+                  <button class="btn btn-danger" onclick="deleteTeam(${team.id})">Delete</button>
+                </td>
+              `;
+          }
 
           tr.innerHTML = `
             <td><strong>${team.name}</strong></td>
             <td>${memberNames || "—"}</td>
             <td>${team.epics.join(", ") || "—"}</td>
-            <td>
-              <button class="btn btn-secondary" onclick="showAssignEpic(${team.id})">Assign Epic</button>
-              <button class="btn btn-secondary" onclick="showAddMembers(${team.id})">Add Members</button>
-              <button class="btn btn-danger" onclick="deleteTeam(${team.id})">Delete</button>
-            </td>
+            ${actionsHtml}
           `;
           tbody.appendChild(tr);
         });
     }
 
-    // Populate members dropdowns in modals
-    const memberSelect = document.getElementById("member-select");
-    const newMemberSelect = document.getElementById("new-member-select");
-    [memberSelect, newMemberSelect].forEach(select => {
-      select.innerHTML = '';
-      users.forEach(user => {
-        const option = document.createElement("option");
-        option.value = user.id;
-        option.textContent = user.name || user.email; // Fallback to email if name is not set
-        select.appendChild(option);
-      });
-    });
+    // Populate dropdowns in modals (only if manager/admin)
+    if (isManager || isAdmin) {
+        const memberSelect = document.getElementById("member-select");
+        const newMemberSelect = document.getElementById("new-member-select");
+        [memberSelect, newMemberSelect].forEach(select => {
+          select.innerHTML = '';
+          users.forEach(user => {
+            const option = document.createElement("option");
+            option.value = user.id;
+            option.textContent = user.name || user.email;
+            select.appendChild(option);
+          });
+        });
 
-    // Populate epics dropdown in modal
-    const epicSelect = document.getElementById("epic-select");
-    epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
-    epics.forEach(epic => {
-      const option = document.createElement("option");
-      option.value = epic.id;
-      option.textContent = epic.name;
-      epicSelect.appendChild(option);
-    });
+        const epicSelect = document.getElementById("epic-select");
+        epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
+        epics.forEach(epic => {
+          const option = document.createElement("option");
+          option.value = epic.id;
+          option.textContent = epic.name;
+          epicSelect.appendChild(option);
+        });
+    }
 
   } catch (err) {
-    document.getElementById("error-msg").textContent = err.message;
-    document.getElementById("error-msg").style.display = "block";
+    showError(err.message);
   }
 }
 
 async function submitTeam() {
-  const token = requireAuth();
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Content-Type': 'application/json'
-  };
-
+  const auth_token = requireAuth();
+  const headers = { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' };
   const name = document.getElementById("team-name").value;
-  if (!name.trim()) {
-      alert("Team name cannot be empty.");
-      return;
-  }
+  if (!name.trim()) { alert("Team name cannot be empty."); return; }
   const member_ids = Array.from(document.getElementById("member-select").selectedOptions).map(o => parseInt(o.value));
 
   const res = await fetch('/api/teams', {
@@ -411,7 +420,7 @@ async function submitTeam() {
 
   if (res.ok) {
     closeModal('createTeamModal');
-    document.getElementById("team-name").value = ''; // Clear input
+    document.getElementById("team-name").value = '';
     loadTeamsAndDropdowns();
   } else {
     const errData = await res.json();
@@ -425,16 +434,10 @@ function showAssignEpic(teamId) {
 }
 
 async function submitAssignEpic() {
-  const token = requireAuth();
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Content-Type': 'application/json'
-  };
+  const auth_token = requireAuth();
+  const headers = { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' };
   const epic_id = parseInt(document.getElementById("epic-select").value);
-  if (!epic_id) {
-      alert("Please select an epic.");
-      return;
-  }
+  if (!epic_id) { alert("Please select an epic."); return; }
 
   const res = await fetch(`/api/teams/${selectedTeamId}/assign_epic`, {
     method: "POST",
@@ -457,16 +460,10 @@ function showAddMembers(teamId) {
 }
 
 async function submitAddMembers() {
-  const token = requireAuth();
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Content-Type': 'application/json'
-  };
+  const auth_token = requireAuth();
+  const headers = { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' };
   const member_ids = Array.from(document.getElementById("new-member-select").selectedOptions).map(o => parseInt(o.value));
-  if (member_ids.length === 0) {
-      alert("Please select at least one member to add.");
-      return;
-  }
+  if (member_ids.length === 0) { alert("Please select at least one member to add."); return; }
 
   const res = await fetch(`/api/teams/${selectedTeamId}/members`, {
     method: "PUT",
@@ -484,31 +481,35 @@ async function submitAddMembers() {
 }
 
 async function deleteTeam(teamId) {
-  if (!confirm("Are you sure you want to delete this team? This will remove all member and epic associations. This action cannot be undone.")) return;
-
-  const token = requireAuth();
-  const headers = {
-    'Authorization': 'Bearer ' + token
-  };
+  if (!confirm("Are you sure you want to delete this team? This action cannot be undone.")) return;
+  const auth_token = requireAuth();
+  const headers = { 'Authorization': 'Bearer ' + auth_token };
 
   try {
-    const res = await fetch(`/api/teams/${teamId}`, {
-      method: "DELETE",
-      headers
-    });
-
-    if (res.ok) {
-      loadTeamsAndDropdowns();
-    } else {
+    const res = await fetch(`/api/teams/${teamId}`, { method: "DELETE", headers });
+    if (!res.ok) {
       const data = await res.json();
-      alert("Error: " + (data.message || "Failed to delete team."));
+      throw new Error(data.message || "Failed to delete team.");
     }
+    loadTeamsAndDropdowns();
   } catch (err) {
-    console.error("Delete Error:", err);
-    alert("An error occurred while deleting the team.");
+    alert("Error: " + err.message);
   }
 }
 
-window.onload = loadTeamsAndDropdowns;
+function applyRoleBasedUI() {
+    if (!isManager && !isAdmin) {
+        document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    document.getElementById('nav-teams').classList.add('sidebar-active');
+}
+
+window.onload = () => {
+    requireAuth();
+    applyRoleBasedUI();
+    loadTeamsAndDropdowns();
+};
 </script>
 {% endblock %}

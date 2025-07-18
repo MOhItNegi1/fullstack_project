@@ -11,11 +11,11 @@
 
   .sidebar {
     position: fixed;
-    top: 60px; /* below the header */
+    top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background: #1a202c; /* Dark background for sidebar */
+    background: #1a202c;
     color: #fff;
     padding: 1.5rem 1rem;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
@@ -29,7 +29,8 @@
   }
 
   .sidebar a {
-    display: block;
+    display: flex;
+    align-items: center;
     margin-bottom: 1.2rem;
     color: #cbd5e0;
     font-weight: 500;
@@ -44,6 +45,11 @@
     background-color: #2d3748;
   }
   
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
   .sidebar a i {
     margin-right: 0.8rem;
     width: 20px;
@@ -51,7 +57,7 @@
   }
 
   .main-content-area {
-    margin-left: 240px; /* Accounts for fixed sidebar */
+    margin-left: 240px;
     width: calc(100% - 240px);
     padding: 2rem;
   }
@@ -207,13 +213,13 @@
     <!-- Sidebar Navigation -->
     <div class="sidebar">
       <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
-      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
-      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
-      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
-      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
-      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
-      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
       <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
     </div>
 
@@ -221,7 +227,7 @@
       <h2>Sprints</h2>
       <div class="error" id="error-msg"></div>
 
-      <div class="actions-bar">
+      <div class="actions-bar" data-role="manager-admin">
         <button class="btn btn-primary" onclick="openCreateSprintModal()"><i class="fa-solid fa-plus"></i> Create Sprint</button>
       </div>
 
@@ -233,7 +239,7 @@
             <th>Epic</th>
             <th>Due Date</th>
             <th>Status</th>
-            <th>Actions</th>
+            <th data-role="manager-admin">Actions</th>
           </tr>
         </thead>
         <tbody id="sprint-tbody">
@@ -248,27 +254,28 @@
   <div class="modal-content">
     <span class="modal-close" onclick="closeModal('createSprintModal')">&times;</span>
     <h3>Create New Sprint</h3>
+    <form id="createSprintForm">
+        <label for="create-sprint-name">Sprint Name</label>
+        <input type="text" id="create-sprint-name" placeholder="e.g., Q3 Feature Launch" required />
 
-    <label for="create-sprint-name">Sprint Name</label>
-    <input type="text" id="create-sprint-name" placeholder="e.g., Q3 Feature Launch" required />
+        <label for="create-epic-select">Epic</label>
+        <select id="create-epic-select" required></select>
 
-    <label for="create-epic-select">Epic</label>
-    <select id="create-epic-select" required></select>
+        <label for="create-due">Due Date</label>
+        <input type="date" id="create-due" required />
 
-    <label for="create-due">Due Date</label>
-    <input type="date" id="create-due" required />
+        <label for="create-status">Status</label>
+        <select id="create-status">
+          <option value="Planned">Planned</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+        </select>
 
-    <label for="create-status">Status</label>
-    <select id="create-status">
-      <option value="Planned">Planned</option>
-      <option value="Active">Active</option>
-      <option value="Completed">Completed</option>
-    </select>
-
-    <div class="modal-buttons">
-        <button class="btn btn-secondary" onclick="closeModal('createSprintModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitCreateSprint()">Create Sprint</button>
-    </div>
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('createSprintModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Sprint</button>
+        </div>
+    </form>
   </div>
 </div>
 
@@ -277,34 +284,40 @@
   <div class="modal-content">
     <span class="modal-close" onclick="closeModal('editSprintModal')">&times;</span>
     <h3>Edit Sprint</h3>
+    <form id="editSprintForm">
+        <input type="hidden" id="edit-id" />
 
-    <input type="hidden" id="edit-id" />
+        <label for="edit-sprint-name">Sprint Name</label>
+        <input type="text" id="edit-sprint-name" />
 
-    <label for="edit-sprint-name">Sprint Name</label>
-    <input type="text" id="edit-sprint-name" />
+        <label for="edit-epic-select">Epic</label>
+        <select id="edit-epic-select"></select>
 
-    <label for="edit-epic-select">Epic</label>
-    <select id="edit-epic-select"></select>
+        <label for="edit-due">Due Date</label>
+        <input type="date" id="edit-due" />
 
-    <label for="edit-due">Due Date</label>
-    <input type="date" id="edit-due" />
+        <label for="edit-status">Status</label>
+        <select id="edit-status">
+          <option value="Planned">Planned</option>
+          <option value="Active">Active</option>
+          <option value="Completed">Completed</option>
+        </select>
 
-    <label for="edit-status">Status</label>
-    <select id="edit-status">
-      <option value="Planned">Planned</option>
-      <option value="Active">Active</option>
-      <option value="Completed">Completed</option>
-    </select>
-
-    <div class="modal-buttons">
-        <button class="btn btn-secondary" onclick="closeModal('editSprintModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="submitEditSprint()">Save Changes</button>
-    </div>
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('editSprintModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
   </div>
 </div>
 
 <script>
 const token = localStorage.getItem("access_token");
+const userInfo = JSON.parse(localStorage.getItem('user_info'));
+const userRoles = userInfo ? userInfo.roles : [];
+const isManager = userRoles.includes('manager');
+const isAdmin = userRoles.includes('admin');
+let allEpics = [];
 
 function requireAuth() {
   if (!token) {
@@ -314,21 +327,13 @@ function requireAuth() {
   return token;
 }
 
-function openModal(id) {
-  document.getElementById(id).style.display = "flex";
-}
-
-function closeModal(id) {
-  document.getElementById(id).style.display = "none";
-}
-
+function openModal(id) { document.getElementById(id).style.display = "flex"; }
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
 function showError(message) {
     const errorDiv = document.getElementById("error-msg");
     errorDiv.textContent = message;
     errorDiv.style.display = "block";
 }
-
-let allEpics = [];
 
 async function loadSprints() {
   const auth_token = requireAuth();
@@ -349,32 +354,40 @@ async function loadSprints() {
 
     const tbody = document.getElementById("sprint-tbody");
     tbody.innerHTML = "";
+    const colspan = (isManager || isAdmin) ? 6 : 5;
 
     if (sprintsData.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem;">No sprints found. Create one to get started.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 2rem;">No sprints found.</td></tr>`;
       return;
     }
 
     sprintsData.forEach(sprint => {
       const epicName = allEpics.find(e => e.id === sprint.epic_id)?.name || 'N/A';
       const tr = document.createElement("tr");
+      
+      let actionsHtml = '';
+      if (isManager || isAdmin) {
+          actionsHtml = `
+            <td class="action-btns">
+              <button class="btn btn-secondary" onclick="editSprint(${sprint.id})">Edit</button>
+              <button class="btn btn-danger" onclick="deleteSprint(${sprint.id})">Delete</button>
+            </td>
+          `;
+      }
+
       tr.innerHTML = `
         <td>${sprint.id}</td>
         <td><strong>${sprint.sprint}</strong></td>
         <td>${epicName}</td>
         <td>${sprint.due}</td>
         <td>${sprint.status}</td>
-        <td class="action-btns">
-          <button class="btn btn-secondary" onclick="editSprint(${sprint.id})">Edit</button>
-          <button class="btn btn-danger" onclick="deleteSprint(${sprint.id})">Delete</button>
-        </td>
+        ${actionsHtml}
       `;
       tbody.appendChild(tr);
     });
 
   } catch (err) {
     showError(err.message);
-    console.error(err);
   }
 }
 
@@ -390,26 +403,16 @@ function populateCreateSprintDropdowns() {
 }
 
 function openCreateSprintModal() {
+    document.getElementById("createSprintForm").reset();
     populateCreateSprintDropdowns();
     openModal('createSprintModal');
 }
 
-function clearCreateModal() {
-    document.getElementById("create-sprint-name").value = "";
-    document.getElementById("create-epic-select").value = "";
-    document.getElementById("create-due").value = "";
-    document.getElementById("create-status").value = "Planned";
-}
-
-async function submitCreateSprint() {
+document.getElementById("createSprintForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
     const auth_token = requireAuth();
     if (!auth_token) return;
 
-    const headers = {
-        Authorization: "Bearer " + auth_token,
-        "Content-Type": "application/json"
-    };
-    
     const sprintName = document.getElementById("create-sprint-name").value.trim();
     const epicId = document.getElementById("create-epic-select").value;
     const dueDate = document.getElementById("create-due").value;
@@ -429,31 +432,26 @@ async function submitCreateSprint() {
     try {
         const res = await fetch("/api/sprints", {
             method: "POST",
-            headers,
+            headers: { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' },
             body
         });
-
         if (!res.ok) {
             const errData = await res.json();
             throw new Error(errData.message || "Failed to create sprint.");
         }
-        
         closeModal("createSprintModal");
-        clearCreateModal(); // FIX: Clear fields manually instead of using form.reset()
         loadSprints();
-
     } catch (err) {
         alert("Error: " + err.message);
     }
-}
+});
 
 async function editSprint(id) {
   const auth_token = requireAuth();
   if (!auth_token) return;
-  const headers = { Authorization: "Bearer " + auth_token };
   
   try {
-    const res = await fetch(`/api/sprints/${id}`, { headers });
+    const res = await fetch(`/api/sprints/${id}`, { headers: { Authorization: "Bearer " + auth_token } });
     if (!res.ok) throw new Error("Could not fetch sprint details.");
     
     const data = await res.json();
@@ -469,9 +467,7 @@ async function editSprint(id) {
       const option = document.createElement("option");
       option.value = epic.id;
       option.textContent = epic.name;
-      if (epic.id === data.epic_id) {
-        option.selected = true;
-      }
+      if (epic.id === data.epic_id) option.selected = true;
       epicSelect.appendChild(option);
     });
 
@@ -481,45 +477,38 @@ async function editSprint(id) {
   }
 }
 
-async function submitEditSprint() {
-  const id = document.getElementById("edit-id").value;
-  const auth_token = requireAuth();
-  if (!auth_token) return;
+document.getElementById("editSprintForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("edit-id").value;
+    const auth_token = requireAuth();
+    if (!auth_token) return;
 
-  const headers = {
-    Authorization: "Bearer " + auth_token,
-    "Content-Type": "application/json"
-  };
-
-  const body = JSON.stringify({
-    sprint: document.getElementById("edit-sprint-name").value.trim(),
-    epic_id: parseInt(document.getElementById("edit-epic-select").value),
-    due: document.getElementById("edit-due").value,
-    status: document.getElementById("edit-status").value
-  });
-
-  try {
-    const res = await fetch(`/api/sprints/${id}`, {
-        method: "PUT",
-        headers,
-        body
+    const body = JSON.stringify({
+        sprint: document.getElementById("edit-sprint-name").value.trim(),
+        epic_id: parseInt(document.getElementById("edit-epic-select").value),
+        due: document.getElementById("edit-due").value,
+        status: document.getElementById("edit-status").value
     });
 
-    if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Failed to update sprint.");
+    try {
+        const res = await fetch(`/api/sprints/${id}`, {
+            method: "PUT",
+            headers: { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' },
+            body
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "Failed to update sprint.");
+        }
+        closeModal("editSprintModal");
+        loadSprints();
+    } catch(err) {
+        alert("Error: " + err.message);
     }
-
-    closeModal("editSprintModal");
-    loadSprints();
-  } catch(err) {
-      alert("Error: " + err.message);
-  }
-}
+});
 
 async function deleteSprint(id) {
   if (!confirm("Are you sure you want to delete this sprint? This action cannot be undone.")) return;
-  
   const auth_token = requireAuth();
   if (!auth_token) return;
   
@@ -528,19 +517,30 @@ async function deleteSprint(id) {
         method: "DELETE",
         headers: { Authorization: "Bearer " + auth_token }
     });
-
-    const result = await res.json();
-
     if (!res.ok) {
+        const result = await res.json();
         throw new Error(result.message || "You are not allowed to delete this sprint.");
     }
-    
     loadSprints();
   } catch(err) {
       alert("Error: " + err.message);
   }
 }
 
-window.onload = loadSprints;
+function applyRoleBasedUI() {
+    if (!isManager && !isAdmin) {
+        document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    // Set active link in sidebar
+    document.getElementById('nav-sprints').classList.add('sidebar-active');
+}
+
+window.onload = () => {
+    requireAuth();
+    applyRoleBasedUI();
+    loadSprints();
+};
 </script>
 {% endblock %}

@@ -11,11 +11,11 @@
 
   .sidebar {
     position: fixed;
-    top: 60px; /* below the header */
+    top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background: #1a202c; /* Dark background for sidebar */
+    background: #1a202c;
     color: #fff;
     padding: 1.5rem 1rem;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
@@ -29,7 +29,8 @@
   }
 
   .sidebar a {
-    display: block;
+    display: flex;
+    align-items: center;
     margin-bottom: 1.2rem;
     color: #cbd5e0;
     font-weight: 500;
@@ -44,6 +45,11 @@
     background-color: #2d3748;
   }
   
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
   .sidebar a i {
     margin-right: 0.8rem;
     width: 20px;
@@ -51,7 +57,7 @@
   }
 
   .main-content-area {
-    margin-left: 240px; /* Accounts for fixed sidebar */
+    margin-left: 240px;
     width: calc(100% - 240px);
     padding: 2rem;
   }
@@ -207,20 +213,20 @@
     <!-- Sidebar Navigation -->
     <div class="sidebar">
       <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
-      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
-      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
-      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
-      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
-      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
-      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
       <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
     </div>
 
     <div class="main-content-area">
         <h2>Stories</h2>
         <div class="error" id="error-msg"></div>
-        <div class="actions-bar">
+        <div class="actions-bar" data-role="manager-admin">
             <button class="btn btn-primary" onclick="openCreateStoryModal()">+ Create Story</button>
         </div>
         <table>
@@ -233,7 +239,7 @@
                     <th>Status</th>
                     <th>Due Date</th>
                     <th>Assignee</th>
-                    <th>Actions</th>
+                    <th data-role="manager-admin">Actions</th>
                 </tr>
             </thead>
             <tbody id="stories-tbody">
@@ -287,6 +293,10 @@
 
 <script>
     const token = localStorage.getItem("access_token");
+    const userInfo = JSON.parse(localStorage.getItem('user_info'));
+    const userRoles = userInfo ? userInfo.roles : [];
+    const isManager = userRoles.includes('manager');
+    const isAdmin = userRoles.includes('admin');
     let allEpics = [];
     let allUsers = [];
 
@@ -328,14 +338,25 @@
 
             const tbody = document.getElementById("stories-tbody");
             tbody.innerHTML = "";
+            const colspan = (isManager || isAdmin) ? 8 : 7;
 
             if (stories.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem;">No stories found. Create one to get started.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 2rem;">No stories found. Create one to get started.</td></tr>`;
                 return;
             }
 
             stories.forEach(story => {
                 const tr = document.createElement("tr");
+                let actionsHtml = '';
+                if (isManager || isAdmin) {
+                    actionsHtml = `
+                        <td>
+                            <button class="btn btn-secondary" onclick="openEditStoryModal(${story.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteStory(${story.id})">Delete</button>
+                        </td>
+                    `;
+                }
+
                 tr.innerHTML = `
                     <td>${story.id}</td>
                     <td><a href="/stories/${story.id}" style="font-weight: 600; text-decoration: none;">${story.title}</a></td>
@@ -344,10 +365,7 @@
                     <td>${story.status}</td>
                     <td>${story.due_date}</td>
                     <td>${story.assignee_name || 'Unassigned'}</td>
-                    <td>
-                        <button class="btn btn-secondary" onclick="openEditStoryModal(${story.id})">Edit</button>
-                        <button class="btn btn-danger" onclick="deleteStory(${story.id})">Delete</button>
-                    </td>
+                    ${actionsHtml}
                 `;
                 tbody.appendChild(tr);
             });
@@ -383,7 +401,7 @@
         document.getElementById("story-id").value = "";
         document.getElementById("modal-title").textContent = "Create New Story";
         document.getElementById("modal-submit-btn").textContent = "Create Story";
-        document.getElementById("status").style.display = 'none'; // Hide status on create
+        document.getElementById("status").style.display = 'none';
         document.querySelector('label[for="status"]').style.display = 'none';
         populateModalDropdowns();
         openModal('storyModal');
@@ -406,7 +424,7 @@
             document.getElementById("priority").value = story.priority;
             document.getElementById("status").value = story.status;
             document.getElementById("due-date").value = story.due_date;
-            document.getElementById("status").style.display = 'block'; // Show status on edit
+            document.getElementById("status").style.display = 'block';
             document.querySelector('label[for="status"]').style.display = 'block';
 
             populateModalDropdowns(story);
@@ -475,7 +493,21 @@
             alert("Error: " + err.message);
         }
     }
+    
+    function applyRoleBasedUI() {
+        if (!isManager && !isAdmin) {
+            document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+        // Set active link in sidebar
+        document.getElementById('nav-stories').classList.add('sidebar-active');
+    }
 
-    window.onload = loadStories;
+    window.onload = () => {
+        requireAuth();
+        applyRoleBasedUI();
+        loadStories();
+    };
 </script>
 {% endblock %}

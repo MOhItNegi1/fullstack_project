@@ -45,6 +45,12 @@
     background-color: #2d3748;
   }
   
+  /* NEW: Active sidebar link style */
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
   .sidebar a i {
     margin-right: 0.8rem;
     width: 20px;
@@ -143,7 +149,7 @@
     margin-bottom: 0.7rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     cursor: grab;
-    transition: box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease, opacity 0.2s ease;
     border-left: 5px solid transparent;
   }
   .kanban-card:hover {
@@ -179,6 +185,15 @@
       background: none; border: none; color: #5e6c84; cursor: pointer; padding: 2px 4px;
   }
   .card-actions button:hover { color: #172b4d; }
+  
+  /* NEW: Drag & Drop Placeholder */
+  .drop-placeholder {
+      background-color: rgba(0, 82, 204, 0.1);
+      border: 2px dashed #0052cc;
+      border-radius: 6px;
+      margin-bottom: 0.7rem;
+      height: 80px; /* Example height */
+  }
 
   /* Modal Styles */
   .modal {
@@ -214,13 +229,13 @@
   <!-- Sidebar Navigation -->
   <div class="sidebar">
     <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
-    <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-    <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
-    <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
-    <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
-    <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
-    <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
-    <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+    <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+    <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+    <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+    <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+    <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+    <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
     <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
   </div>
 
@@ -235,6 +250,7 @@
     <div class="sub-navbar">
       <a href="{{ url_for('board_summary_page') }}">Overall Summary</a>
       <a href="{{ url_for('kanban_page') }}" class="active">Board</a>
+      <a href="{{ url_for('backlog_page') }}">Backlog</a>
     </div>
     {% endif %}
 
@@ -287,6 +303,12 @@ const urlParams = new URLSearchParams(window.location.search);
 const epicIdFromUrl = urlParams.get("id");
 let allEpics = [], allUsers = [];
 
+const userInfo = JSON.parse(localStorage.getItem('user_info'));
+const userRoles = userInfo ? userInfo.roles : [];
+const isManager = userRoles.includes('manager');
+const isAdmin = userRoles.includes('admin');
+const currentUserId = userInfo ? userInfo.id : null;
+
 function requireAuth() {
   if (!token) {
     window.location.href = "{{ url_for('login_page') }}";
@@ -306,9 +328,7 @@ function showError(message) {
 async function loadKanbanBoard() {
     const auth_token = requireAuth();
     if (!auth_token) return;
-
     const headers = { "Authorization": "Bearer " + auth_token };
-    const kanbanContainer = document.querySelector('.kanban-container');
     
     try {
         const [storiesRes, epicsRes, usersRes] = await Promise.all([
@@ -326,7 +346,7 @@ async function loadKanbanBoard() {
         allUsers = await usersRes.json();
 
         const filteredStories = epicIdFromUrl 
-            ? stories.filter(story => story.epic_id == epicIdFromUrl) 
+            ? stories.filter(story => story.epic_id == parseInt(epicIdFromUrl)) 
             : stories;
         
         renderColumns(filteredStories);
@@ -339,7 +359,7 @@ async function loadKanbanBoard() {
 
 function renderColumns(stories) {
     const kanbanContainer = document.querySelector('.kanban-container');
-    kanbanContainer.innerHTML = ''; // Clear previous content
+    kanbanContainer.innerHTML = ''; 
     
     const statuses = ["To Do", "In Progress", "Blocked", "Done"];
     
@@ -350,11 +370,15 @@ function renderColumns(stories) {
 
         const storiesInColumn = stories.filter(s => s.status === status);
 
+        const addButtonHtml = (isManager || isAdmin) && status === 'To Do' 
+            ? `<button class="add-button" onclick="openCreateStoryModal()">+</button>` 
+            : '';
+
         column.innerHTML = `
             <div class="column-header">
                 <span class="title">${status}</span>
                 <span class="count">${storiesInColumn.length}</span>
-                ${status === 'To Do' ? '<button class="add-button" onclick="openCreateStoryModal()">+</button>' : ''}
+                ${addButtonHtml}
             </div>
             <div class="column-cards">
                 ${storiesInColumn.length === 0 ? '<div class="empty-column">No stories here.</div>' : ''}
@@ -380,16 +404,21 @@ function createStoryCard(story) {
     const assignee = allUsers.find(u => u.id === story.assignee_id);
     const assigneeInitial = assignee ? (assignee.name || assignee.email).charAt(0).toUpperCase() : '?';
 
+    const canTakeAction = isManager || isAdmin || story.assignee_id === currentUserId;
+    const actionsHtml = canTakeAction ? `
+        <div class="card-actions">
+            <button onclick="openEditStoryModal(${story.id})"><i class="fas fa-edit"></i></button>
+            <button onclick="deleteStory(${story.id})"><i class="fas fa-trash"></i></button>
+        </div>
+    ` : '';
+
     card.innerHTML = `
         <div class="card-title">
             <a href="/stories/${story.id}">${story.title}</a>
         </div>
         <div class="card-footer">
             <span>Due: ${story.due_date}</span>
-            <div class="card-actions">
-                <button onclick="openEditStoryModal(${story.id})"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteStory(${story.id})"><i class="fas fa-trash"></i></button>
-            </div>
+            ${actionsHtml}
             <div class="card-assignee">
                 <div class="avatar" title="${assignee ? (assignee.name || assignee.email) : 'Unassigned'}">${assigneeInitial}</div>
             </div>
@@ -398,46 +427,91 @@ function createStoryCard(story) {
     return card;
 }
 
-// Drag and Drop Logic (largely unchanged, but more robust)
+// Enhanced Drag and Drop Logic
 let draggedCard = null;
 function addDragAndDropListeners() {
-    document.querySelectorAll('.kanban-card').forEach(card => card.addEventListener('dragstart', e => {
-        draggedCard = e.target.closest('.kanban-card');
-        setTimeout(() => draggedCard.style.opacity = '0.5', 0);
-    }));
-    document.querySelectorAll('.kanban-column').forEach(column => {
-        column.addEventListener('dragover', e => e.preventDefault());
-        column.addEventListener('drop', async e => {
-            e.preventDefault();
-            const targetColumn = e.target.closest('.kanban-column');
-            if (draggedCard && targetColumn) {
-                const storyId = draggedCard.dataset.storyId;
-                const newStatus = targetColumn.dataset.status;
-                if (draggedCard.dataset.currentStatus !== newStatus) {
-                    targetColumn.querySelector('.column-cards').appendChild(draggedCard);
-                    draggedCard.dataset.currentStatus = newStatus;
-                    // API Call to update status
-                    try {
-                        const res = await fetch(`/api/stories/${storyId}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                            body: JSON.stringify({ status: newStatus })
-                        });
-                        if (!res.ok) throw new Error('Failed to update status.');
-                        loadKanbanBoard(); // Reload to update counts
-                    } catch (err) {
-                        alert("Error updating story: " + err.message);
-                        loadKanbanBoard(); // Revert on error
-                    }
-                }
+    const cards = document.querySelectorAll('.kanban-card');
+    const columns = document.querySelectorAll('.kanban-column');
+
+    cards.forEach(card => {
+        card.addEventListener('dragstart', () => {
+            draggedCard = card;
+            setTimeout(() => card.style.opacity = '0.5', 0);
+        });
+        card.addEventListener('dragend', () => {
+            if (draggedCard) {
                 draggedCard.style.opacity = '1';
                 draggedCard = null;
+                document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+            }
+        });
+    });
+
+    columns.forEach(column => {
+        column.addEventListener('dragover', e => {
+            e.preventDefault();
+            const placeholder = document.querySelector('.drop-placeholder');
+            if (!placeholder) {
+                const newPlaceholder = document.createElement('div');
+                newPlaceholder.className = 'drop-placeholder';
+                newPlaceholder.style.height = `${draggedCard.offsetHeight}px`;
+                column.querySelector('.column-cards').appendChild(newPlaceholder);
+            }
+            const afterElement = getDragAfterElement(column.querySelector('.column-cards'), e.clientY);
+            const cardsContainer = column.querySelector('.column-cards');
+            if (afterElement == null) {
+                cardsContainer.appendChild(placeholder);
+            } else {
+                cardsContainer.insertBefore(placeholder, afterElement);
+            }
+        });
+        
+        column.addEventListener('dragleave', () => {
+            document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+        });
+
+        column.addEventListener('drop', async e => {
+            e.preventDefault();
+            document.querySelectorAll('.drop-placeholder').forEach(p => p.remove());
+            const targetColumn = e.target.closest('.kanban-column');
+            if (!draggedCard || !targetColumn) return;
+
+            const storyId = draggedCard.dataset.storyId;
+            const newStatus = targetColumn.dataset.status;
+            
+            if (draggedCard.dataset.currentStatus !== newStatus) {
+                try {
+                    const res = await fetch(`/api/stories/${storyId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    if (!res.ok) throw new Error('Failed to update status.');
+                    loadKanbanBoard(); 
+                } catch (err) {
+                    alert("Error updating story: " + err.message);
+                    loadKanbanBoard(); 
+                }
             }
         });
     });
 }
 
-// Modal and Form Logic (reusing from stories/list.html)
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+
+// Modal and Form Logic
 function populateModalDropdowns(story = null) {
     const epicSelect = document.getElementById("epic-select");
     epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
@@ -449,7 +523,7 @@ function populateModalDropdowns(story = null) {
         if ((story && story.epic_id === epic.id) || (epicIdFromUrl && epic.id == epicIdFromUrl)) option.selected = true;
         epicSelect.appendChild(option);
     });
-    if (epicIdFromUrl) epicSelect.disabled = true; else epicSelect.disabled = false;
+    epicSelect.disabled = !!epicIdFromUrl;
 
     const assigneeSelect = document.getElementById("assignee-select");
     assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
@@ -463,6 +537,10 @@ function populateModalDropdowns(story = null) {
 }
 
 function openCreateStoryModal() {
+    if (!isManager && !isAdmin) {
+        alert("You do not have permission to create stories.");
+        return;
+    }
     document.getElementById("storyForm").reset();
     document.getElementById("story-id").value = "";
     document.getElementById("modal-title").textContent = "Create New Story";
@@ -474,7 +552,6 @@ function openCreateStoryModal() {
 }
 
 async function openEditStoryModal(id) {
-    document.getElementById("storyForm").reset();
     const auth_token = requireAuth();
     if (!auth_token) return;
     try {
@@ -545,6 +622,20 @@ async function deleteStory(id) {
     }
 }
 
-window.onload = loadKanbanBoard;
+function applyRoleBasedUI() {
+    if (!isManager && !isAdmin) {
+        document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    // Set active link in sidebar
+    document.getElementById('nav-dashboard').classList.add('sidebar-active');
+}
+
+window.onload = () => {
+    requireAuth();
+    applyRoleBasedUI();
+    loadKanbanBoard();
+};
 </script>
 {% endblock %}

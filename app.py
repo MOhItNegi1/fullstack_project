@@ -951,7 +951,7 @@ class EpicSummary(Resource):
 # Team Resources
 class TeamCreate(Resource):
     @jwt_required()
-    @role_required(["admin", "manager"])
+    @role_required(["admin"])
     def post(self):
         data = request.get_json()
         try:

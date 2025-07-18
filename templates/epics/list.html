@@ -1,306 +1,461 @@
 {% extends "base.html" %}
 {% block title %}Epics - Jira{% endblock %}
 {% block content %}
-
-<!-- FontAwesome for icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-
 <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-  }
-
-  .project-layout {
+  /* Consistent styling from other pages */
+  .main-layout {
     display: flex;
     min-height: 100vh;
     background-color: #f4f6fa;
   }
 
-  .project-sidebar {
+  .sidebar {
     position: fixed;
     top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background-color: #1a202c;
+    background: #1a202c;
     color: #fff;
     padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
     z-index: 1000;
-    transition: transform 0.3s ease;
   }
 
-  .project-sidebar h4 {
+  .sidebar h4 {
     color: #cbd5e0;
     margin-bottom: 2rem;
     font-size: 1.2rem;
   }
 
-  .project-sidebar a {
-    display: block;
+  .sidebar a {
+    display: flex;
+    align-items: center;
     margin-bottom: 1.2rem;
     color: #cbd5e0;
     font-weight: 500;
     text-decoration: none;
-    transition: color 0.3s;
-  }
-
-  .project-sidebar a:hover {
-    color: #63b3ed;
-  }
-
-  .project-main {
-    margin-left: 240px;
-    padding: 2rem;
-    width: calc(100% - 240px);
-  }
-
-  .section-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 1.5rem;
-    color: #2d3748;
-  }
-
-  .form-card {
-    background-color: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    margin-bottom: 2rem;
-  }
-
-  .form-group {
-    margin-bottom: 1.2rem;
-  }
-
-  .form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    display: block;
-  }
-
-  .form-group input,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.7rem;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.2s ease;
-  }
-
-  .form-group input:focus,
-  .form-group textarea:focus {
-    border-color: #3182ce;
-    outline: none;
-  }
-
-  .btn-submit {
-    background-color: #3182ce;
-    color: white;
-    padding: 0.7rem 1.5rem;
-    border: none;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
     border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
   }
 
-  .btn-submit:hover {
-    background-color: #2b6cb0;
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
   }
 
-  .project-table {
+  .main-content-area {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  h2 {
+    color: #172b4d;
+    margin-bottom: 1.5rem;
+  }
+
+  .actions-bar {
+    margin-bottom: 1.5rem;
+  }
+
+  .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+      margin-right: 0.5rem;
+      transition: background-color 0.2s ease;
+  }
+
+  .btn-primary {
+      background-color: #0052cc;
+      color: white;
+  }
+  .btn-primary:hover {
+      background-color: #0041a8;
+  }
+  
+  .btn-secondary {
+      background-color: #f4f5f7;
+      color: #172b4d;
+      border: 1px solid #dfe1e6;
+  }
+  .btn-secondary:hover {
+      background-color: #ebedf0;
+  }
+
+  .btn-danger {
+      background-color: #de350b;
+      color: white;
+  }
+  .btn-danger:hover {
+      background-color: #bf2600;
+  }
+
+  table {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
+    background: white;
+    margin-bottom: 2rem;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
 
-  .project-table th,
-  .project-table td {
-    padding: 1rem;
+  th, td {
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid #dfe1e6;
     text-align: left;
-    border-bottom: 1px solid #edf2f7;
+    vertical-align: middle;
   }
 
-  .project-table th {
-    background-color: #f7fafc;
-    color: #4a5568;
+  th {
+    background: #f4f5f7;
+    font-weight: 600;
+    color: #5e6c84;
   }
 
-  .project-table tr:hover {
-    background-color: #ebf8ff;
+  tr:last-child td {
+    border-bottom: none;
   }
-
-  .btn-action {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.8rem;
+  
+  td .btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+  }
+  
+  .error {
+    color: #de350b;
+    margin-top: 1rem;
+    background-color: #ffeded;
+    padding: 1rem;
     border-radius: 6px;
+    display: none; /* Hidden by default */
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .modal-close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #777;
     cursor: pointer;
-    border: none;
-    font-weight: 500;
-    margin-right: 0.5rem;
+  }
+  .modal-close:hover {
+      color: #333;
   }
 
-  .btn-edit {
-    background-color: #e2e8f0;
-    color: #2b6cb0;
+  .modal-content label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+    color: #5e6c84;
   }
 
-  .btn-delete {
-    background-color: #fed7d7;
-    color: #c53030;
+  .modal-content input,
+  .modal-content select,
+  .modal-content textarea {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .modal-buttons {
+      margin-top: 1.5rem;
+      text-align: right;
   }
 </style>
 
-<div class="project-layout">
-  <div class="project-sidebar">
-    <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
-    <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-    <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
-    <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
-    <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
-    <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
-    <a href="/notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
-    <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
-  </div>
-
-  <div class="project-main">
-    <h2 class="section-title">📁 Epics</h2>
-
-    <div class="form-card">
-      <form id="epicForm">
-        <div class="form-group">
-          <label for="name">Epic Name</label>
-          <input type="text" id="name" required />
-        </div>
-        <div class="form-group">
-          <label for="deadline">Deadline</label>
-          <input type="date" id="deadline" required />
-        </div>
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea id="description" rows="3"></textarea>
-        </div>
-        <button type="submit" class="btn-submit"><i class="fa-solid fa-plus"></i> Create Epic</button>
-      </form>
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
     </div>
 
-    <table class="project-table" id="epicTable">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Deadline</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="epicTableBody">
-        <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
-      </tbody>
-    </table>
+    <div class="main-content-area">
+      <h2>Epics</h2>
+      <div class="error" id="error-msg"></div>
+
+      <div class="actions-bar" data-role="manager-admin">
+        <button class="btn btn-primary" onclick="openCreateEpicModal()"><i class="fa-solid fa-plus"></i> Create Epic</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Deadline</th>
+            <th>Status</th>
+            <th>Links</th>
+            <th data-role="manager-admin">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="epics-tbody">
+          <tr><td colspan="6" style="text-align:center; padding: 2rem;">Loading epics...</td></tr>
+        </tbody>
+      </table>
+    </div>
+</div>
+
+<!-- Create/Edit Epic Modal -->
+<div class="modal" id="epicModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('epicModal')">&times;</span>
+    <h3 id="modal-title">Create New Epic</h3>
+    <form id="epicForm">
+        <input type="hidden" id="epic-id" />
+        <label for="name">Epic Name</label>
+        <input type="text" id="name" required />
+
+        <label for="description">Description</label>
+        <textarea id="description" rows="4" required></textarea>
+
+        <label for="deadline">Deadline</label>
+        <input type="date" id="deadline" required />
+        
+        <label for="status" style="display:none;">Status</label>
+        <select id="status" style="display:none;">
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+        </select>
+
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('epicModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="modal-submit-btn">Create Epic</button>
+        </div>
+    </form>
   </div>
 </div>
 
 <script>
-  const token = localStorage.getItem("access_token");
+const token = localStorage.getItem("access_token");
+const userInfo = JSON.parse(localStorage.getItem('user_info'));
+const userRoles = userInfo ? userInfo.roles : [];
+const isManager = userRoles.includes('manager');
+const isAdmin = userRoles.includes('admin');
+
+function requireAuth() {
   if (!token) {
-    alert("Please login first.");
     window.location.href = "{{ url_for('login_page') }}";
+    return null;
   }
+  return token;
+}
 
-  document.getElementById("epicForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const name = document.getElementById("name").value.trim();
-    const description = document.getElementById("description").value.trim();
-    const deadline = document.getElementById("deadline").value;
+function openModal(id) { document.getElementById(id).style.display = "flex"; }
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
+function showError(message) {
+    const errorDiv = document.getElementById("error-msg");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
+}
 
-    const res = await fetch("/api/epics", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({ name, description, deadline })
-    });
+async function loadEpics() {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+  const headers = { Authorization: "Bearer " + auth_token };
 
-    const data = await res.json();
-
-    if (res.ok) {
-      alert("Epic created successfully!");
-      document.getElementById("epicForm").reset();
-      loadEpics();
-    } else {
-      alert(data.message || "Failed to create epic.");
-    }
-  });
-
-  async function loadEpics() {
-    const res = await fetch("/api/epics/all", {
-      headers: {
-        "Authorization": "Bearer " + token
-      }
-    });
-
-    const data = await res.json();
-    const tbody = document.getElementById("epicTableBody");
+  try {
+    const res = await fetch("/api/epics/all", { headers });
+    if (!res.ok) throw new Error("Failed to load epics. Your session may have expired.");
+    
+    const epics = await res.json();
+    const tbody = document.getElementById("epics-tbody");
     tbody.innerHTML = "";
+    const colspan = (isManager || isAdmin) ? 6 : 5;
 
-    if (data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No epics found.</td></tr>`;
+    if (epics.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; padding: 2rem;">No epics found.</td></tr>`;
       return;
     }
 
-    data.forEach(p => {
-      const row = `
-        <tr>
-          <td><a href="{{ url_for('epic_summary_page') }}?id=${p.id}" style="color:#2b6cb0; font-weight:600;">${p.name}</a></td>
-          <td>${p.description}</td>
-          <td>${p.deadline}</td>
-          <td>${p.status}</td>
-          <td>
-            <button class="btn-action btn-edit" onclick="editEpic(${p.id})"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-action btn-delete" onclick="deleteEpic(${p.id})"><i class="fa-solid fa-trash"></i></button>
-          </td>
-        </tr>
-      `;
-      tbody.insertAdjacentHTML("beforeend", row);
-    });
-  }
-
-  async function editEpic(id) {
-      alert(`Editing Epic with ID: ${id}. You'll need a modal or separate page.`);
-  }
-
-  async function deleteEpic(id) {
-      if (!confirm("Are you sure you want to delete this epic? All associated stories and tasks will also be deleted.")) return;
-
-      const res = await fetch(`/api/epics/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": "Bearer " + token }
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-          alert(result.message || "Epic deleted successfully.");
-          loadEpics();
-      } else {
-          alert(result.message || "Failed to delete epic.");
+    epics.forEach(epic => {
+      const tr = document.createElement("tr");
+      
+      let actionsHtml = '';
+      if (isManager || isAdmin) {
+          actionsHtml = `
+            <td class="action-btns">
+              <button class="btn btn-secondary" onclick="openEditEpicModal(${epic.id})">Edit</button>
+              <button class="btn btn-danger" onclick="deleteEpic(${epic.id})">Delete</button>
+            </td>
+          `;
       }
-  }
 
-  function logout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user_info");
-    window.location.href = "/";
-  }
+      tr.innerHTML = `
+        <td><strong>${epic.name}</strong></td>
+        <td>${epic.description}</td>
+        <td>${epic.deadline}</td>
+        <td>${epic.status}</td>
+        <td>
+            <a href="/epics/summary?id=${epic.id}" class="btn btn-secondary">Summary</a>
+            <a href="/kanban?id=${epic.id}" class="btn btn-secondary">Board</a>
+        </td>
+        ${actionsHtml}
+      `;
+      tbody.appendChild(tr);
+    });
 
-  window.onload = loadEpics;
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+function openCreateEpicModal() {
+    document.getElementById("epicForm").reset();
+    document.getElementById("epic-id").value = "";
+    document.getElementById("modal-title").textContent = "Create New Epic";
+    document.getElementById("modal-submit-btn").textContent = "Create Epic";
+    document.getElementById("status").style.display = 'none';
+    document.querySelector('label[for="status"]').style.display = 'none';
+    openModal('epicModal');
+}
+
+async function openEditEpicModal(id) {
+    document.getElementById("epicForm").reset();
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+
+    try {
+        const res = await fetch(`/api/epics/${id}`, { headers: { 'Authorization': 'Bearer ' + auth_token } });
+        if (!res.ok) throw new Error('Could not fetch epic details.');
+        const epic = await res.json();
+
+        document.getElementById("modal-title").textContent = "Edit Epic";
+        document.getElementById("modal-submit-btn").textContent = "Save Changes";
+        document.getElementById("epic-id").value = epic.id;
+        document.getElementById("name").value = epic.name;
+        document.getElementById("description").value = epic.description;
+        document.getElementById("deadline").value = epic.deadline;
+        document.getElementById("status").value = epic.status;
+        document.getElementById("status").style.display = 'block';
+        document.querySelector('label[for="status"]').style.display = 'block';
+        
+        openModal('epicModal');
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+
+document.getElementById("epicForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("epic-id").value;
+    const url = id ? `/api/epics/${id}` : "/api/epics";
+    const method = id ? "PUT" : "POST";
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+
+    const body = {
+        name: document.getElementById("name").value,
+        description: document.getElementById("description").value,
+        deadline: document.getElementById("deadline").value,
+        status: document.getElementById("status").value || 'To Do'
+    };
+
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + auth_token },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || `Failed to ${id ? 'update' : 'create'} epic.`);
+        }
+        closeModal('epicModal');
+        loadEpics();
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+});
+
+async function deleteEpic(id) {
+    if (!confirm("Are you sure you want to delete this epic? This will also delete all associated stories and tasks.")) return;
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+
+    try {
+        const res = await fetch(`/api/epics/${id}`, {
+            method: "DELETE",
+            headers: { 'Authorization': 'Bearer ' + auth_token }
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || 'Failed to delete epic.');
+        }
+        loadEpics();
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+
+function applyRoleBasedUI() {
+    if (!isManager && !isAdmin) {
+        document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    document.getElementById('nav-epics').classList.add('sidebar-active');
+}
+
+window.onload = () => {
+    requireAuth();
+    applyRoleBasedUI();
+    loadEpics();
+};
 </script>
-
 {% endblock %}
