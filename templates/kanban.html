@@ -2,191 +2,7 @@
 {% block title %}Kanban Board - Jira{% endblock %}
 {% block content %}
 <style>
-  /* Existing Kanban styles */
-  .kanban-container {
-    display: flex;
-    gap: 1rem;
-    padding: 2rem;
-    /* margin-left: 240px; -- This will now be handled by .main-content-area */
-    background-color: #f4f6fa;
-    min-height: calc(100vh - 60px);
-    overflow-x: auto;
-    padding-top: 5rem; /* Add padding to account for the new sub-navigation bar */
-  }
-
-  .kanban-column {
-    flex: 1;
-    min-width: 280px; /* Minimum width for columns */
-    max-width: 350px; /* Maximum width for columns */
-    background-color: #ebf0f7; /* Light background for columns */
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-  }
-
-  .column-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #c8d6e5;
-    color: #2d3748;
-    text-align: center;
-    position: relative;
-  }
-
-  .column-header .add-button {
-    position: absolute;
-    right: 0;
-    top: 0;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #0052cc;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-
-  .column-header .add-button:hover {
-    color: #003d99;
-  }
-
-  .column-cards {
-    flex-grow: 1;
-    min-height: 100px; /* Ensure drop target area */
-    padding: 0.5rem;
-    background-color: #f8f9fa; /* Slightly different background for cards area */
-    border-radius: 6px;
-  }
-
-  .kanban-card {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 0.8rem 1rem;
-    margin-bottom: 0.7rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    cursor: grab;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  }
-
-  .kanban-card.dragging {
-    opacity: 0.5;
-    border: 2px dashed #0052cc;
-  }
-
-  .card-title {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #1a1a1a;
-    margin-bottom: 0.3rem;
-  }
-
-  .card-meta {
-    font-size: 0.85rem;
-    color: #5e6c84;
-  }
-
-  .card-meta span {
-    margin-right: 0.8rem;
-  }
-
-  .card-meta i {
-    margin-right: 0.3rem;
-  }
-
-  .empty-column {
-    text-align: center;
-    color: #718096;
-    padding: 1rem;
-    font-style: italic;
-  }
-
-  .error-message {
-    color: #cc0000;
-    margin-bottom: 1rem;
-    font-weight: 500;
-    text-align: center;
-  }
-
-  /* Modal Styles */
-  .modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: white;
-    padding: 1.5rem;
-    width: 500px;
-    border-radius: 8px;
-    position: relative;
-  }
-
-  .modal-content label {
-    font-weight: bold;
-    display: block;
-    margin-top: 10px;
-  }
-
-  .modal-content input,
-  .modal-content select,
-  .modal-content textarea {
-    width: 100%;
-    padding: 0.5rem;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-
-  .modal-close {
-    position: absolute;
-    right: 1rem;
-    top: 1rem;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 20px;
-  }
-
-  .modal-buttons {
-    margin-top: 20px;
-    text-align: right;
-  }
-
-  .modal-buttons button {
-    padding: 0.6rem 1.2rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 500;
-    margin-left: 10px;
-  }
-
-  .modal-buttons .btn-primary {
-    background-color: #0052cc;
-    color: white;
-    border: none;
-  }
-
-  .modal-buttons .btn-secondary {
-    background-color: #e2e8f0;
-    color: #4a5568;
-    border: none;
-  }
-
-  /* Styles for main layout and sidebar (copied from project.html/dashboard.html) */
+  /* Consistent layout from other pages */
   .main-layout {
     display: flex;
     min-height: 100vh;
@@ -195,11 +11,11 @@
 
   .sidebar {
     position: fixed;
-    top: 60px; /* below the header */
+    top: 60px;
     left: 0;
     width: 240px;
     height: calc(100vh - 60px);
-    background: #1a202c; /* Dark background for sidebar */
+    background: #1a202c;
     color: #fff;
     padding: 1.5rem 1rem;
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
@@ -213,38 +29,45 @@
   }
 
   .sidebar a {
-    display: block;
+    display: flex;
+    align-items: center;
     margin-bottom: 1.2rem;
     color: #cbd5e0;
     font-weight: 500;
     text-decoration: none;
-    transition: color 0.3s;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
   }
 
   .sidebar a:hover {
     color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
   }
 
   .main-content-area {
-    margin-left: 240px; /* Accounts for fixed sidebar */
+    margin-left: 240px;
     width: calc(100% - 240px);
-    /* padding-top is handled by .kanban-container now */
   }
 
-  /* New styles for sub-navigation */
+  /* Sub-navigation */
   .sub-navbar {
-    position: fixed;
-    top: 60px; /* Below the main topbar */
-    left: 240px; /* To the right of the main sidebar */
-    width: calc(100% - 240px);
-    height: 60px; /* Height of the sub-navbar */
+    position: sticky;
+    top: 60px;
     background-color: #ffffff;
     border-bottom: 1px solid #e2e8f0;
     display: flex;
     align-items: center;
     padding: 0 2rem;
+    height: 60px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    z-index: 999; /* Below main topbar but above kanban content */
+    z-index: 999;
   }
 
   .sub-navbar a {
@@ -257,16 +80,134 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  .sub-navbar a:hover {
-    background-color: #f4f6fa;
-    color: #1a1a1a;
-  }
-
   .sub-navbar a.active {
     background-color: #e6f4ff;
     color: #0052cc;
     font-weight: 600;
   }
+
+  /* Kanban specific styles */
+  .kanban-container {
+    display: flex;
+    gap: 1rem;
+    padding: 2rem;
+    background-color: #f4f6fa;
+    min-height: calc(100vh - 120px);
+    overflow-x: auto;
+  }
+
+  .kanban-column {
+    flex: 1;
+    min-width: 300px;
+    max-width: 350px;
+    background-color: #ebecf0;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .column-header {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    color: #5e6c84;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .column-header .title {
+      text-transform: uppercase;
+  }
+  .column-header .count {
+      background-color: #dfe1e6;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+  }
+  .column-header .add-button {
+    background: none; border: none; font-size: 1.5rem; color: #5e6c84; cursor: pointer;
+  }
+
+  .column-cards {
+    flex-grow: 1;
+    min-height: 100px;
+    border-radius: 6px;
+  }
+
+  .kanban-card {
+    background-color: #ffffff;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.7rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: grab;
+    transition: box-shadow 0.2s ease;
+    border-left: 5px solid transparent;
+  }
+  .kanban-card:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  .kanban-card.priority-High { border-left-color: #de350b; }
+  .kanban-card.priority-Medium { border-left-color: #ffab00; }
+  .kanban-card.priority-Low { border-left-color: #0065ff; }
+
+  .card-title a {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #172b4d;
+    text-decoration: none;
+  }
+  .card-title a:hover { text-decoration: underline; }
+
+  .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #5e6c84;
+  }
+  .card-assignee .avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background-color: #0052cc; color: white;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 0.75rem;
+  }
+  .card-actions button {
+      background: none; border: none; color: #5e6c84; cursor: pointer; padding: 2px 4px;
+  }
+  .card-actions button:hover { color: #172b4d; }
+
+  /* Modal Styles */
+  .modal {
+    display: none; position: fixed; z-index: 1050; left: 0; top: 0;
+    width: 100%; height: 100%; background-color: rgba(0,0,0,0.6);
+    justify-content: center; align-items: center;
+  }
+  .modal-content {
+    background-color: #fff; padding: 2rem; width: 90%; max-width: 500px;
+    border-radius: 8px; position: relative; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+  .modal-close {
+    position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem;
+    font-weight: bold; color: #777; cursor: pointer;
+  }
+  .modal-content label {
+    display: block; margin-top: 1rem; font-weight: 600; color: #5e6c84;
+  }
+  .modal-content input, .modal-content select {
+    width: 100%; padding: 0.6rem; margin-top: 0.5rem; border: 1px solid #ccc;
+    border-radius: 4px; font-size: 1rem;
+  }
+  .modal-buttons { margin-top: 1.5rem; text-align: right; }
+  .btn {
+      padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer;
+      font-weight: 500; border: none;
+  }
+  .btn-primary { background-color: #0052cc; color: white; }
+  .btn-secondary { background-color: #f4f5f7; color: #172b4d; }
 </style>
 
 <div class="main-layout">
@@ -284,100 +225,67 @@
   </div>
 
   <div class="main-content-area">
-    {# Conditionally show sub-navbar based on epic_id presence #}
     {% if epic_id %}
     <div class="sub-navbar">
-      {# If epic_id is present, link to Epic-specific Summary, Board, Backlog #}
-      <a href="{{ url_for('epic_summary_page', id=epic_id) }}" class="nav-link {% if request.endpoint == 'epic_summary_page' %}active{% endif %}">Summary</a>
-      <a href="{{ url_for('kanban_page', id=epic_id) }}" class="nav-link {% if request.endpoint == 'kanban_page' %}active{% endif %}">Board</a>
-      <a href="{{ url_for('backlog_page', id=epic_id) }}" class="nav-link {% if request.endpoint == 'backlog_page' %}active{% endif %}">Backlog</a>
+      <a href="{{ url_for('epic_summary_page', id=epic_id) }}">Summary</a>
+      <a href="{{ url_for('kanban_page', id=epic_id) }}" class="active">Board</a>
+      <a href="{{ url_for('backlog_page', id=epic_id) }}">Backlog</a>
     </div>
     {% else %}
-    {# If no epic_id, show sub-navbar for overall Board Summary and general Kanban #}
     <div class="sub-navbar">
-      <a href="{{ url_for('board_summary_page') }}" class="nav-link {% if request.endpoint == 'board_summary_page' %}active{% endif %}">Overall Summary</a>
-      <a href="{{ url_for('kanban_page') }}" class="nav-link {% if request.endpoint == 'kanban_page' %}active{% endif %}">Board</a>
-      {# You might add a general backlog link here if you create one, e.g., url_for('general_backlog_page') #}
+      <a href="{{ url_for('board_summary_page') }}">Overall Summary</a>
+      <a href="{{ url_for('kanban_page') }}" class="active">Board</a>
     </div>
     {% endif %}
 
-    <div class="kanban-container" {% if not epic_id %}style="padding-top: 2rem;"{% endif %}>
-      <div id="error-msg" class="error-message" style="display:none;"></div>
-
-      <!-- To Do Column -->
-      <div class="kanban-column" data-status="To Do">
-        <div class="column-header">
-          To Do
-          <button class="add-button" onclick="openCreateStoryModal()">+</button>
-        </div>
-        <div class="column-cards">
-          <div class="empty-column">Drag stories here or they will appear here.</div>
-        </div>
-      </div>
-
-      <!-- In Progress Column -->
-      <div class="kanban-column" data-status="In Progress">
-        <div class="column-header">In Progress</div>
-        <div class="column-cards">
-          <div class="empty-column">No stories in progress.</div>
-        </div>
-      </div>
-
-      <!-- Blocked Column -->
-      <div class="kanban-column" data-status="Blocked">
-        <div class="column-header">Blocked</div>
-        <div class="column-cards">
-          <div class="empty-column">No blocked stories.</div>
-        </div>
-      </div>
-
-      <!-- Done Column -->
-      <div class="kanban-column" data-status="Done">
-        <div class="column-header">Done</div>
-        <div class="column-cards">
-          <div class="empty-column">No completed stories.</div>
-        </div>
-      </div>
+    <div class="kanban-container">
+      <div id="error-msg" class="error-message" style="display:none; width: 100%;"></div>
+      <!-- Columns will be dynamically generated here -->
     </div>
   </div>
 </div>
 
-<!-- Create Story Modal -->
-<div class="modal" id="createStoryModal">
+<!-- Reusable Story Modal -->
+<div class="modal" id="storyModal">
   <div class="modal-content">
-    <span class="modal-close" onclick="closeModal('createStoryModal')">&times;</span>
-    <h3>Create New Story</h3>
-
-    <label for="create-story-title">Title</label>
-    <input type="text" id="create-story-title" required />
-
-    <label for="create-story-priority">Priority</label>
-    <select id="create-story-priority">
-      <option value="Low">Low</option>
-      <option value="Medium">Medium</option>
-      <option value="High">High</option>
-    </select>
-
-    <label for="create-story-due">Due Date</label>
-    <input type="date" id="create-story-due" required />
-
-    <label for="create-story-epic">Epic</label>
-    <select id="create-story-epic" required></select>
-
-    <label for="create-story-assignee">Assignee</label>
-    <select id="create-story-assignee"></select>
-
-    <div class="modal-buttons">
-      <button class="btn-secondary" onclick="closeModal('createStoryModal')">Cancel</button>
-      <button class="btn-primary" onclick="submitCreateStory()">Create Story</button>
-    </div>
+    <span class="modal-close" onclick="closeModal('storyModal')">&times;</span>
+    <h3 id="modal-title">Create New Story</h3>
+    <form id="storyForm">
+        <input type="hidden" id="story-id" />
+        <label for="title">Title</label>
+        <input type="text" id="title" required />
+        <label for="priority">Priority</label>
+        <select id="priority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+        <label for="status">Status</label>
+        <select id="status">
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Blocked">Blocked</option>
+            <option value="Done">Done</option>
+        </select>
+        <label for="due-date">Due Date</label>
+        <input type="date" id="due-date" required />
+        <label for="epic-select">Epic</label>
+        <select id="epic-select" required></select>
+        <label for="assignee-select">Assignee</label>
+        <select id="assignee-select"></select>
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('storyModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="modal-submit-btn">Create Story</button>
+        </div>
+    </form>
   </div>
 </div>
 
 <script>
 const token = localStorage.getItem("access_token");
 const urlParams = new URLSearchParams(window.location.search);
-const epicIdFromUrl = urlParams.get("id"); // Get epic_id from URL for filtering
+const epicIdFromUrl = urlParams.get("id");
+let allEpics = [], allUsers = [];
 
 function requireAuth() {
   if (!token) {
@@ -387,267 +295,255 @@ function requireAuth() {
   return token;
 }
 
-function openModal(id) {
-  document.getElementById(id).style.display = "flex";
+function openModal(id) { document.getElementById(id).style.display = "flex"; }
+function closeModal(id) { document.getElementById(id).style.display = "none"; }
+function showError(message) {
+    const errorDiv = document.getElementById("error-msg");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
 }
-
-function closeModal(id) {
-  document.getElementById(id).style.display = "none";
-}
-
-let allEpics = []; // Global to store epics for dropdown
-let allUsers = []; // Global to store users for dropdown
 
 async function loadKanbanBoard() {
-  const auth_token = requireAuth();
-  if (!auth_token) return;
+    const auth_token = requireAuth();
+    if (!auth_token) return;
 
-  const headers = { "Authorization": "Bearer " + auth_token };
-  const errorMsgDiv = document.getElementById("error-msg");
-  const columnElements = document.querySelectorAll('.kanban-column');
+    const headers = { "Authorization": "Bearer " + auth_token };
+    const kanbanContainer = document.querySelector('.kanban-container');
+    
+    try {
+        const [storiesRes, epicsRes, usersRes] = await Promise.all([
+            fetch("/api/stories/all", { headers }),
+            fetch("/api/epics/all", { headers }),
+            fetch("/api/users/all", { headers })
+        ]);
 
-  // Clear existing cards and reset empty messages
-  columnElements.forEach(column => {
-    const cardsContainer = column.querySelector('.column-cards');
-    cardsContainer.innerHTML = `<div class="empty-column">No stories in this column.</div>`;
-  });
+        if (!storiesRes.ok) throw new Error("Failed to fetch stories.");
+        if (!epicsRes.ok) throw new Error("Failed to fetch epics.");
+        if (!usersRes.ok) throw new Error("Failed to fetch users.");
 
-  try {
-    // Fetch all necessary data concurrently
-    const [storiesRes, epicsRes, usersRes] = await Promise.all([
-      fetch("/api/stories/all", { headers }),
-      fetch("/api/epics/all", { headers }),
-      fetch("/api/users/all", { headers })
-    ]);
+        const stories = await storiesRes.json();
+        allEpics = await epicsRes.json();
+        allUsers = await usersRes.json();
 
-    if (!storiesRes.ok) throw new Error("Failed to fetch stories.");
-    if (!epicsRes.ok) throw new Error("Failed to fetch epics.");
-    if (!usersRes.ok) throw new Error("Failed to fetch users.");
+        const filteredStories = epicIdFromUrl 
+            ? stories.filter(story => story.epic_id == epicIdFromUrl) 
+            : stories;
+        
+        renderColumns(filteredStories);
+        addDragAndDropListeners();
 
-    const stories = await storiesRes.json();
-    allEpics = await epicsRes.json(); // Populate global epics
-    allUsers = await usersRes.json(); // Populate global users
-
-    // Filter stories by epicIdFromUrl if present
-    const filteredStories = epicIdFromUrl 
-      ? stories.filter(story => story.epic_id == epicIdFromUrl) 
-      : stories;
-
-    filteredStories.forEach(story => {
-      const card = document.createElement('div');
-      card.classList.add('kanban-card');
-      card.setAttribute('draggable', true);
-      card.dataset.storyId = story.id;
-      card.dataset.currentStatus = story.status; // Store current status
-
-      let priorityIcon = '';
-      if (story.priority === 'High') {
-        priorityIcon = '<i class="fas fa-exclamation-circle" style="color: red;"></i>';
-      } else if (story.priority === 'Medium') {
-        priorityIcon = '<i class="fas fa-exclamation-triangle" style="color: orange;"></i>';
-      } else {
-        priorityIcon = '<i class="fas fa-info-circle" style="color: gray;"></i>';
-      }
-
-      card.innerHTML = `
-        <div class="card-title">${story.title}</div>
-        <div class="card-meta">
-          <span>ID: ${story.id}</span>
-          <span>${priorityIcon} ${story.priority}</span>
-          <span>Due: ${story.due_date}</span>
-          <span>Assignee: ${story.assignee_name || 'N/A'}</span>
-        </div>
-      `;
-
-      // Append card to the correct column
-      const targetColumn = document.querySelector(`.kanban-column[data-status="${story.status}"] .column-cards`);
-      if (targetColumn) {
-        const emptyMessage = targetColumn.querySelector('.empty-column');
-        if (emptyMessage) emptyMessage.remove(); // Remove empty message if present
-        targetColumn.appendChild(card);
-      } else {
-        console.warn(`No column found for status: ${story.status}`);
-      }
-    });
-
-    // Add drag and drop listeners after cards are loaded
-    addDragAndDropListeners();
-
-  } catch (err) {
-    errorMsgDiv.textContent = err.message || "An error occurred loading the Kanban board.";
-    errorMsgDiv.style.display = 'block';
-    console.error("Error loading Kanban board:", err);
-  }
+    } catch (err) {
+        showError(err.message || "An error occurred loading the Kanban board.");
+    }
 }
 
-function addDragAndDropListeners() {
-  const cards = document.querySelectorAll('.kanban-card');
-  const columns = document.querySelectorAll('.kanban-column');
+function renderColumns(stories) {
+    const kanbanContainer = document.querySelector('.kanban-container');
+    kanbanContainer.innerHTML = ''; // Clear previous content
+    
+    const statuses = ["To Do", "In Progress", "Blocked", "Done"];
+    
+    statuses.forEach(status => {
+        const column = document.createElement('div');
+        column.className = 'kanban-column';
+        column.dataset.status = status;
 
-  cards.forEach(card => {
-    card.addEventListener('dragstart', dragStart);
-  });
+        const storiesInColumn = stories.filter(s => s.status === status);
 
-  columns.forEach(column => {
-    column.addEventListener('dragover', dragOver);
-    column.addEventListener('dragleave', dragLeave);
-    column.addEventListener('drop', drop);
-  });
-}
+        column.innerHTML = `
+            <div class="column-header">
+                <span class="title">${status}</span>
+                <span class="count">${storiesInColumn.length}</span>
+                ${status === 'To Do' ? '<button class="add-button" onclick="openCreateStoryModal()">+</button>' : ''}
+            </div>
+            <div class="column-cards">
+                ${storiesInColumn.length === 0 ? '<div class="empty-column">No stories here.</div>' : ''}
+            </div>
+        `;
 
-let draggedCard = null;
-
-function dragStart(e) {
-  draggedCard = this;
-  setTimeout(() => {
-    this.classList.add('dragging');
-  }, 0); // Add class after a tiny delay to allow initial styling to apply
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', this.dataset.storyId); // Pass story ID
-}
-
-function dragOver(e) {
-  e.preventDefault(); // Necessary to allow dropping
-  this.classList.add('drag-over'); // Visual feedback for drop target
-  e.dataTransfer.dropEffect = 'move';
-}
-
-function dragLeave() {
-  this.classList.remove('drag-over');
-}
-
-async function drop(e) {
-  e.preventDefault();
-  this.classList.remove('drag-over');
-
-  if (draggedCard) {
-    const storyId = draggedCard.dataset.storyId;
-    const newStatus = this.dataset.status; // Get status from the column
-
-    // Only update if status has changed
-    if (draggedCard.dataset.currentStatus !== newStatus) {
-      const cardsContainer = this.querySelector('.column-cards');
-      const emptyMessage = cardsContainer.querySelector('.empty-column');
-      if (emptyMessage) emptyMessage.remove(); // Remove empty message if present
-
-      cardsContainer.appendChild(draggedCard); // Move the card in UI immediately
-
-      // Update backend
-      const auth_token = requireAuth();
-      if (!auth_token) {
-        loadKanbanBoard(); // Reload board if auth fails after drag
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/stories/${storyId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + auth_token
-          },
-          body: JSON.stringify({ status: newStatus })
+        const cardsContainer = column.querySelector('.column-cards');
+        storiesInColumn.forEach(story => {
+            cardsContainer.appendChild(createStoryCard(story));
         });
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to update story status.");
-        }
-        draggedCard.dataset.currentStatus = newStatus; // Update data-attribute on success
-        console.log(`Story ${storyId} moved to ${newStatus}`);
-      } catch (err) {
-        alert("Error updating story status: " + err.message);
-        console.error("Drag-and-drop update failed:", err);
-        loadKanbanBoard(); // Reload board to revert UI on error
-      }
-    }
-    draggedCard.classList.remove('dragging');
-    draggedCard = null;
-  }
-}
-
-// --- New Story Creation Functions ---
-function openCreateStoryModal() {
-  // Populate Epic dropdown
-  const epicSelect = document.getElementById("create-story-epic");
-  epicSelect.innerHTML = '';
-  // Filter epics based on the current epic_id in the URL if available
-  const epicsToDisplay = epicIdFromUrl 
-    ? allEpics.filter(e => e.id == epicIdFromUrl) 
-    : allEpics;
-
-  epicsToDisplay.forEach(epic => {
-    const option = document.createElement("option");
-    option.value = epic.id;
-    option.textContent = epic.name;
-    // If epicIdFromUrl is present, pre-select the epic
-    if (epicIdFromUrl && epic.id == epicIdFromUrl) {
-      option.selected = true;
-      epicSelect.disabled = true; // Optionally disable selection if already filtered
-    }
-    epicSelect.appendChild(option);
-  });
-
-  // Populate Assignee dropdown
-  const assigneeSelect = document.getElementById("create-story-assignee");
-  assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
-  allUsers.forEach(user => {
-    const option = document.createElement("option");
-    option.value = user.id;
-    option.textContent = user.name || user.email;
-    assigneeSelect.appendChild(option);
-  });
-
-  openModal('createStoryModal');
-}
-
-async function submitCreateStory() {
-  const auth_token = requireAuth();
-  if (!auth_token) return;
-
-  const title = document.getElementById("create-story-title").value.trim();
-  const priority = document.getElementById("create-story-priority").value;
-  const due_date = document.getElementById("create-story-due").value;
-  const epic_id_val = document.getElementById("create-story-epic").value;
-  const assignee_id = document.getElementById("create-story-assignee").value || null;
-
-  if (!title || !due_date || !epic_id_val) {
-    alert("Please fill in all required fields (Title, Due Date, Epic).");
-    return;
-  }
-
-  try {
-    const res = await fetch("/api/stories", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + auth_token
-      },
-      body: JSON.stringify({
-        title,
-        priority,
-        due_date,
-        epic_id: parseInt(epic_id_val),
-        assignee_id: assignee_id ? parseInt(assignee_id) : null,
-        status: "To Do" // Always "To Do" when created from this button
-      })
+        kanbanContainer.appendChild(column);
     });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || "Failed to create story.");
-    }
-
-    alert("Story created successfully!");
-    closeModal('createStoryModal');
-    document.getElementById('createStoryModal').querySelector('form').reset();
-    loadKanbanBoard();
-  } catch (err) {
-    alert("Error creating story: " + err.message);
-    console.error("Story creation failed:", err);
-  }
 }
 
+function createStoryCard(story) {
+    const card = document.createElement('div');
+    card.className = `kanban-card priority-${story.priority}`;
+    card.setAttribute('draggable', true);
+    card.dataset.storyId = story.id;
+    card.dataset.currentStatus = story.status;
+
+    const assignee = allUsers.find(u => u.id === story.assignee_id);
+    const assigneeInitial = assignee ? (assignee.name || assignee.email).charAt(0).toUpperCase() : '?';
+
+    card.innerHTML = `
+        <div class="card-title">
+            <a href="/stories/${story.id}">${story.title}</a>
+        </div>
+        <div class="card-footer">
+            <span>Due: ${story.due_date}</span>
+            <div class="card-actions">
+                <button onclick="openEditStoryModal(${story.id})"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteStory(${story.id})"><i class="fas fa-trash"></i></button>
+            </div>
+            <div class="card-assignee">
+                <div class="avatar" title="${assignee ? (assignee.name || assignee.email) : 'Unassigned'}">${assigneeInitial}</div>
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+// Drag and Drop Logic (largely unchanged, but more robust)
+let draggedCard = null;
+function addDragAndDropListeners() {
+    document.querySelectorAll('.kanban-card').forEach(card => card.addEventListener('dragstart', e => {
+        draggedCard = e.target.closest('.kanban-card');
+        setTimeout(() => draggedCard.style.opacity = '0.5', 0);
+    }));
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        column.addEventListener('dragover', e => e.preventDefault());
+        column.addEventListener('drop', async e => {
+            e.preventDefault();
+            const targetColumn = e.target.closest('.kanban-column');
+            if (draggedCard && targetColumn) {
+                const storyId = draggedCard.dataset.storyId;
+                const newStatus = targetColumn.dataset.status;
+                if (draggedCard.dataset.currentStatus !== newStatus) {
+                    targetColumn.querySelector('.column-cards').appendChild(draggedCard);
+                    draggedCard.dataset.currentStatus = newStatus;
+                    // API Call to update status
+                    try {
+                        const res = await fetch(`/api/stories/${storyId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        if (!res.ok) throw new Error('Failed to update status.');
+                        loadKanbanBoard(); // Reload to update counts
+                    } catch (err) {
+                        alert("Error updating story: " + err.message);
+                        loadKanbanBoard(); // Revert on error
+                    }
+                }
+                draggedCard.style.opacity = '1';
+                draggedCard = null;
+            }
+        });
+    });
+}
+
+// Modal and Form Logic (reusing from stories/list.html)
+function populateModalDropdowns(story = null) {
+    const epicSelect = document.getElementById("epic-select");
+    epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
+    const epicsToDisplay = epicIdFromUrl ? allEpics.filter(e => e.id == epicIdFromUrl) : allEpics;
+    epicsToDisplay.forEach(epic => {
+        const option = document.createElement("option");
+        option.value = epic.id;
+        option.textContent = epic.name;
+        if ((story && story.epic_id === epic.id) || (epicIdFromUrl && epic.id == epicIdFromUrl)) option.selected = true;
+        epicSelect.appendChild(option);
+    });
+    if (epicIdFromUrl) epicSelect.disabled = true; else epicSelect.disabled = false;
+
+    const assigneeSelect = document.getElementById("assignee-select");
+    assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
+    allUsers.forEach(user => {
+        const option = document.createElement("option");
+        option.value = user.id;
+        option.textContent = user.name || user.email;
+        if (story && story.assignee_id === user.id) option.selected = true;
+        assigneeSelect.appendChild(option);
+    });
+}
+
+function openCreateStoryModal() {
+    document.getElementById("storyForm").reset();
+    document.getElementById("story-id").value = "";
+    document.getElementById("modal-title").textContent = "Create New Story";
+    document.getElementById("modal-submit-btn").textContent = "Create Story";
+    document.getElementById("status").style.display = 'none';
+    document.querySelector('label[for="status"]').style.display = 'none';
+    populateModalDropdowns();
+    openModal('storyModal');
+}
+
+async function openEditStoryModal(id) {
+    document.getElementById("storyForm").reset();
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+    try {
+        const res = await fetch(`/api/stories/${id}`, { headers: { 'Authorization': 'Bearer ' + auth_token } });
+        if (!res.ok) throw new Error('Could not fetch story details.');
+        const story = await res.json();
+        document.getElementById("modal-title").textContent = "Edit Story";
+        document.getElementById("modal-submit-btn").textContent = "Save Changes";
+        document.getElementById("story-id").value = story.id;
+        document.getElementById("title").value = story.title;
+        document.getElementById("priority").value = story.priority;
+        document.getElementById("status").value = story.status;
+        document.getElementById("due-date").value = story.due_date;
+        document.getElementById("status").style.display = 'block';
+        document.querySelector('label[for="status"]').style.display = 'block';
+        populateModalDropdowns(story);
+        openModal('storyModal');
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+
+document.getElementById("storyForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = document.getElementById("story-id").value;
+    const url = id ? `/api/stories/${id}` : "/api/stories";
+    const method = id ? "PUT" : "POST";
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+    const body = {
+        title: document.getElementById("title").value,
+        priority: document.getElementById("priority").value,
+        status: document.getElementById("status").value || 'To Do',
+        due_date: document.getElementById("due-date").value,
+        epic_id: parseInt(document.getElementById("epic-select").value),
+        assignee_id: document.getElementById("assignee-select").value ? parseInt(document.getElementById("assignee-select").value) : null
+    };
+    try {
+        const res = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + auth_token },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || `Failed to ${id ? 'update' : 'create'} story.`);
+        }
+        closeModal('storyModal');
+        loadKanbanBoard();
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+});
+
+async function deleteStory(id) {
+    if (!confirm("Are you sure?")) return;
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+    try {
+        const res = await fetch(`/api/stories/${id}`, {
+            method: "DELETE",
+            headers: { 'Authorization': 'Bearer ' + auth_token }
+        });
+        if (!res.ok) throw new Error('Failed to delete story.');
+        loadKanbanBoard();
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
 
 window.onload = loadKanbanBoard;
 </script>
