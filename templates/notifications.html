@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Notifications - Jira{% endblock %}
+{% block content %}
+<style>
+  .notification-container {
+    padding: 2rem;
+    margin-left: 240px; /* Adjust for sidebar */
+    background-color: #f4f6fa;
+    min-height: calc(100vh - 60px);
+  }
+
+  h2 {
+    margin-bottom: 1.5rem;
+    color: #2d3748;
+  }
+
+  .notification-list {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+
+  .notification-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e0e6ed;
+    transition: background-color 0.2s ease;
+  }
+
+  .notification-item:last-child {
+    border-bottom: none;
+  }
+
+  .notification-item.unread {
+    background-color: #e6f0ff; /* Light blue for unread */
+    font-weight: 600;
+  }
+
+  .notification-item:hover {
+    background-color: #f7fafc;
+  }
+
+  .notification-icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    color: #0052cc;
+  }
+
+  .notification-content {
+    flex-grow: 1;
+  }
+
+  .notification-content p {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+  }
+
+  .notification-content small {
+    display: block;
+    color: #718096;
+    font-size: 0.85rem;
+    margin-top: 0.2rem;
+  }
+
+  .notification-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .notification-actions button {
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .btn-mark-read {
+    background-color: #4CAF50; /* Green */
+    color: white;
+  }
+
+  .btn-mark-read:hover {
+    background-color: #45a049;
+  }
+
+  .btn-delete {
+    background-color: #f44336; /* Red */
+    color: white;
+  }
+
+  .btn-delete:hover {
+    background-color: #da190b;
+  }
+
+  .empty-notifications {
+    padding: 2rem;
+    text-align: center;
+    color: #718096;
+  }
+
+  .error-message {
+    color: #cc0000;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+</style>
+
+<div class="notification-container">
+  <h2>Notifications</h2>
+  <div id="error-msg" class="error-message" style="display:none;"></div>
+
+  <div class="notification-list" id="notification-list">
+    <!-- Notifications will be loaded here by JavaScript -->
+    <div class="empty-notifications">Loading notifications...</div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+
+function requireAuth() {
+  if (!token) {
+    window.location.href = "{{ url_for('login_page') }}";
+    return null;
+  }
+  return token;
+}
+
+async function loadNotifications() {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  const headers = { "Authorization": "Bearer " + auth_token };
+  const notificationListDiv = document.getElementById("notification-list");
+  const errorMsgDiv = document.getElementById("error-msg");
+
+  try {
+    const res = await fetch("/api/notifications", { headers });
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to fetch notifications.");
+    }
+    const notifications = await res.json();
+
+    notificationListDiv.innerHTML = ''; // Clear loading message
+
+    if (notifications.length === 0) {
+      notificationListDiv.innerHTML = '<div class="empty-notifications">No new notifications.</div>';
+      return;
+    }
+
+    notifications.forEach(notif => {
+      const itemDiv = document.createElement("div");
+      itemDiv.classList.add("notification-item");
+      if (!notif.is_read) {
+        itemDiv.classList.add("unread");
+      }
+      itemDiv.dataset.notificationId = notif.id; // Store ID for actions
+
+      let iconClass = 'fa-info-circle'; // Default icon
+      if (notif.type.includes('Assigned') || notif.type.includes('Invitation')) {
+        iconClass = 'fa-user-tag';
+      } else if (notif.type.includes('Completed')) {
+        iconClass = 'fa-check-circle';
+      } else if (notif.type.includes('New')) {
+        iconClass = 'fa-plus-circle';
+      } else if (notif.type.includes('Alert') || notif.type.includes('Error')) {
+        iconClass = 'fa-exclamation-triangle';
+      } else if (notif.type.includes('Deleted')) {
+        iconClass = 'fa-trash-alt';
+      } else if (notif.type.includes('Updated')) {
+        iconClass = 'fa-edit';
+      } else if (notif.type.includes('Deadline')) {
+        iconClass = 'fa-clock';
+      }
+
+
+      itemDiv.innerHTML = `
+        <div class="notification-icon"><i class="fas ${iconClass}"></i></div>
+        <div class="notification-content">
+          <p><strong>${notif.type}:</strong> ${notif.content}</p>
+          <small>${notif.created_at}</small>
+        </div>
+        <div class="notification-actions">
+          ${!notif.is_read ? `<button class="btn-mark-read" onclick="markAsRead(${notif.id})">Mark as Read</button>` : ''}
+          <button class="btn-delete" onclick="deleteNotification(${notif.id})">Delete</button>
+        </div>
+      `;
+      notificationListDiv.appendChild(itemDiv);
+    });
+
+  } catch (err) {
+    errorMsgDiv.textContent = err.message || "An error occurred loading notifications.";
+    errorMsgDiv.style.display = 'block';
+    console.error("Error loading notifications:", err);
+  }
+}
+
+async function markAsRead(id) {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  try {
+    const res = await fetch(`/api/notifications/${id}`, {
+      method: 'PUT',
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + auth_token
+      },
+      body: JSON.stringify({ is_read: true })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to mark notification as read.");
+    }
+    loadNotifications(); // Reload notifications to update UI
+  } catch (err) {
+    alert(err.message);
+    console.error("Error marking notification as read:", err);
+  }
+}
+
+async function deleteNotification(id) {
+  if (!confirm("Are you sure you want to delete this notification?")) return;
+
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  try {
+    const res = await fetch(`/api/notifications/${id}`, {
+      method: 'DELETE',
+      headers: {
+        "Authorization": "Bearer " + auth_token
+      }
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to delete notification.");
+    }
+    loadNotifications(); 
+  } catch (err) {
+    alert(err.message);
+    console.error("Error deleting notification:", err);
+  }
+}
+
+window.onload = loadNotifications;
+</script>
+{% endblock %}

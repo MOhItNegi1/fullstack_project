@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+{% block title %}Sprints - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Consistent styling from other pages */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  h2 {
+    color: #172b4d;
+    margin-bottom: 1.5rem;
+  }
+
+  .actions-bar {
+    margin-bottom: 1.5rem;
+  }
+
+  .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+      margin-right: 0.5rem;
+      transition: background-color 0.2s ease;
+  }
+
+  .btn-primary {
+      background-color: #0052cc;
+      color: white;
+  }
+  .btn-primary:hover {
+      background-color: #0041a8;
+  }
+  
+  .btn-secondary {
+      background-color: #f4f5f7;
+      color: #172b4d;
+      border: 1px solid #dfe1e6;
+  }
+  .btn-secondary:hover {
+      background-color: #ebedf0;
+  }
+
+  .btn-danger {
+      background-color: #de350b;
+      color: white;
+  }
+  .btn-danger:hover {
+      background-color: #bf2600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  th, td {
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid #dfe1e6;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    background: #f4f5f7;
+    font-weight: 600;
+    color: #5e6c84;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+  
+  td .btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+  }
+  
+  .error {
+    color: #de350b;
+    margin-top: 1rem;
+    background-color: #ffeded;
+    padding: 1rem;
+    border-radius: 6px;
+    display: none; /* Hidden by default */
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .modal-close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #777;
+    cursor: pointer;
+  }
+  .modal-close:hover {
+      color: #333;
+  }
+
+  .modal-content label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+    color: #5e6c84;
+  }
+
+  .modal-content input,
+  .modal-content select {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .modal-buttons {
+      margin-top: 1.5rem;
+      text-align: right;
+  }
+</style>
+
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="main-content-area">
+      <h2>Sprints</h2>
+      <div class="error" id="error-msg"></div>
+
+      <div class="actions-bar">
+        <button class="btn btn-primary" onclick="openCreateSprintModal()"><i class="fa-solid fa-plus"></i> Create Sprint</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Sprint Name</th>
+            <th>Epic</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="sprint-tbody">
+          <tr><td colspan="6" style="text-align:center; padding: 2rem;">Loading sprints...</td></tr>
+        </tbody>
+      </table>
+    </div>
+</div>
+
+<!-- Create Sprint Modal -->
+<div class="modal" id="createSprintModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('createSprintModal')">&times;</span>
+    <h3>Create New Sprint</h3>
+
+    <label for="create-sprint-name">Sprint Name</label>
+    <input type="text" id="create-sprint-name" placeholder="e.g., Q3 Feature Launch" required />
+
+    <label for="create-epic-select">Epic</label>
+    <select id="create-epic-select" required></select>
+
+    <label for="create-due">Due Date</label>
+    <input type="date" id="create-due" required />
+
+    <label for="create-status">Status</label>
+    <select id="create-status">
+      <option value="Planned">Planned</option>
+      <option value="Active">Active</option>
+      <option value="Completed">Completed</option>
+    </select>
+
+    <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal('createSprintModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitCreateSprint()">Create Sprint</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Sprint Modal -->
+<div class="modal" id="editSprintModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('editSprintModal')">&times;</span>
+    <h3>Edit Sprint</h3>
+
+    <input type="hidden" id="edit-id" />
+
+    <label for="edit-sprint-name">Sprint Name</label>
+    <input type="text" id="edit-sprint-name" />
+
+    <label for="edit-epic-select">Epic</label>
+    <select id="edit-epic-select"></select>
+
+    <label for="edit-due">Due Date</label>
+    <input type="date" id="edit-due" />
+
+    <label for="edit-status">Status</label>
+    <select id="edit-status">
+      <option value="Planned">Planned</option>
+      <option value="Active">Active</option>
+      <option value="Completed">Completed</option>
+    </select>
+
+    <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal('editSprintModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEditSprint()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("access_token");
+
+function requireAuth() {
+  if (!token) {
+    window.location.href = "{{ url_for('login_page') }}";
+    return null;
+  }
+  return token;
+}
+
+function openModal(id) {
+  document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = "none";
+}
+
+function showError(message) {
+    const errorDiv = document.getElementById("error-msg");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
+}
+
+let allEpics = [];
+
+async function loadSprints() {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+  const headers = { Authorization: "Bearer " + auth_token };
+
+  try {
+    const [sprintsRes, epicsRes] = await Promise.all([
+        fetch("/api/sprints/all", { headers }),
+        fetch("/api/epics/all", { headers })
+    ]);
+    
+    if (!sprintsRes.ok) throw new Error("Failed to load sprints. Your session may have expired.");
+    if (!epicsRes.ok) throw new Error("Failed to load epics. Your session may have expired.");
+    
+    const sprintsData = await sprintsRes.json();
+    allEpics = await epicsRes.json();
+
+    const tbody = document.getElementById("sprint-tbody");
+    tbody.innerHTML = "";
+
+    if (sprintsData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem;">No sprints found. Create one to get started.</td></tr>`;
+      return;
+    }
+
+    sprintsData.forEach(sprint => {
+      const epicName = allEpics.find(e => e.id === sprint.epic_id)?.name || 'N/A';
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${sprint.id}</td>
+        <td><strong>${sprint.sprint}</strong></td>
+        <td>${epicName}</td>
+        <td>${sprint.due}</td>
+        <td>${sprint.status}</td>
+        <td class="action-btns">
+          <button class="btn btn-secondary" onclick="editSprint(${sprint.id})">Edit</button>
+          <button class="btn btn-danger" onclick="deleteSprint(${sprint.id})">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    showError(err.message);
+    console.error(err);
+  }
+}
+
+function populateCreateSprintDropdowns() {
+    const epicSelect = document.getElementById("create-epic-select");
+    epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
+    allEpics.forEach(epic => {
+        const option = document.createElement("option");
+        option.value = epic.id;
+        option.textContent = epic.name;
+        epicSelect.appendChild(option);
+    });
+}
+
+function openCreateSprintModal() {
+    populateCreateSprintDropdowns();
+    openModal('createSprintModal');
+}
+
+function clearCreateModal() {
+    document.getElementById("create-sprint-name").value = "";
+    document.getElementById("create-epic-select").value = "";
+    document.getElementById("create-due").value = "";
+    document.getElementById("create-status").value = "Planned";
+}
+
+async function submitCreateSprint() {
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+
+    const headers = {
+        Authorization: "Bearer " + auth_token,
+        "Content-Type": "application/json"
+    };
+    
+    const sprintName = document.getElementById("create-sprint-name").value.trim();
+    const epicId = document.getElementById("create-epic-select").value;
+    const dueDate = document.getElementById("create-due").value;
+
+    if (!sprintName || !epicId || !dueDate) {
+        alert("Please fill out all fields: Sprint Name, Epic, and Due Date.");
+        return;
+    }
+
+    const body = JSON.stringify({
+        sprint: sprintName,
+        epic_id: parseInt(epicId),
+        due: dueDate,
+        status: document.getElementById("create-status").value
+    });
+
+    try {
+        const res = await fetch("/api/sprints", {
+            method: "POST",
+            headers,
+            body
+        });
+
+        if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(errData.message || "Failed to create sprint.");
+        }
+        
+        closeModal("createSprintModal");
+        clearCreateModal(); // FIX: Clear fields manually instead of using form.reset()
+        loadSprints();
+
+    } catch (err) {
+        alert("Error: " + err.message);
+    }
+}
+
+async function editSprint(id) {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+  const headers = { Authorization: "Bearer " + auth_token };
+  
+  try {
+    const res = await fetch(`/api/sprints/${id}`, { headers });
+    if (!res.ok) throw new Error("Could not fetch sprint details.");
+    
+    const data = await res.json();
+
+    document.getElementById("edit-id").value = data.id;
+    document.getElementById("edit-sprint-name").value = data.sprint;
+    document.getElementById("edit-due").value = data.due;
+    document.getElementById("edit-status").value = data.status;
+
+    const epicSelect = document.getElementById("edit-epic-select");
+    epicSelect.innerHTML = '';
+    allEpics.forEach(epic => {
+      const option = document.createElement("option");
+      option.value = epic.id;
+      option.textContent = epic.name;
+      if (epic.id === data.epic_id) {
+        option.selected = true;
+      }
+      epicSelect.appendChild(option);
+    });
+
+    openModal("editSprintModal");
+  } catch (err) {
+      alert("Error: " + err.message);
+  }
+}
+
+async function submitEditSprint() {
+  const id = document.getElementById("edit-id").value;
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  const headers = {
+    Authorization: "Bearer " + auth_token,
+    "Content-Type": "application/json"
+  };
+
+  const body = JSON.stringify({
+    sprint: document.getElementById("edit-sprint-name").value.trim(),
+    epic_id: parseInt(document.getElementById("edit-epic-select").value),
+    due: document.getElementById("edit-due").value,
+    status: document.getElementById("edit-status").value
+  });
+
+  try {
+    const res = await fetch(`/api/sprints/${id}`, {
+        method: "PUT",
+        headers,
+        body
+    });
+
+    if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Failed to update sprint.");
+    }
+
+    closeModal("editSprintModal");
+    loadSprints();
+  } catch(err) {
+      alert("Error: " + err.message);
+  }
+}
+
+async function deleteSprint(id) {
+  if (!confirm("Are you sure you want to delete this sprint? This action cannot be undone.")) return;
+  
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+  
+  try {
+    const res = await fetch(`/api/sprints/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + auth_token }
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+        throw new Error(result.message || "You are not allowed to delete this sprint.");
+    }
+    
+    loadSprints();
+  } catch(err) {
+      alert("Error: " + err.message);
+  }
+}
+
+window.onload = loadSprints;
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Project Summary - Jira{% endblock %}
+{% block title %}Epic Summary - Jira{% endblock %}
 
 {% block content %}
 <style>
@@ -41,24 +41,24 @@
 
 <div class="summary-container">
   <div class="summary-header">
-    <h2 id="project-title">Project Summary</h2>
+    <h2 id="epic-title">Epic Summary</h2>
   </div>
 
   <div class="project-info">
-    <p><strong>Description:</strong> <span id="project-description">Loading...</span></p>
-    <p><strong>Deadline:</strong> <span id="project-deadline">Loading...</span></p>
-    <p><strong>Status:</strong> <span id="project-status">Loading...</span></p>
-    <p><strong>Team Members:</strong> <span id="project-team">Loading...</span></p>
+    <p><strong>Description:</strong> <span id="epic-description">Loading...</span></p>
+    <p><strong>Deadline:</strong> <span id="epic-deadline">Loading...</span></p>
+    <p><strong>Status:</strong> <span id="epic-status">Loading...</span></p>
+    <p><strong>Team Members:</strong> <span id="epic-team">Loading...</span></p>
   </div>
 
   <div class="chart-section">
-    <h4>Task Status</h4>
+    <h4>Story Status</h4>
+    <div id="storyChart"></div>
+  </div>
+
+  <div class="chart-section">
+    <h4>Created vs Completed Tasks</h4>
     <div id="taskChart"></div>
-  </div>
-
-  <div class="chart-section">
-    <h4>Created vs Resolved Tickets</h4>
-    <div id="ticketChart"></div>
   </div>
 
   <div class="activity-section">
@@ -72,49 +72,49 @@
 <script>
   const token = localStorage.getItem("access_token");
   const urlParams = new URLSearchParams(window.location.search);
-  const projectId = urlParams.get("id");
+  const epicId = urlParams.get("id");
 
   async function loadSummary() {
-    const res = await fetch(`/api/projects/${projectId}/summary`, {
+    const res = await fetch(`/api/epics/${epicId}/summary`, {
       headers: { "Authorization": "Bearer " + token }
     });
     const data = await res.json();
 
-    document.getElementById("project-title").textContent = data.name;
-    document.getElementById("project-description").textContent = data.description;
-    document.getElementById("project-deadline").textContent = data.deadline;
-    document.getElementById("project-status").textContent = data.status;
-    document.getElementById("project-team").textContent = data.team.join(", ");
+    document.getElementById("epic-title").textContent = data.name;
+    document.getElementById("epic-description").textContent = data.description;
+    document.getElementById("epic-deadline").textContent = data.deadline;
+    document.getElementById("epic-status").textContent = data.status;
+    document.getElementById("epic-team").textContent = data.team_members.join(", ");
 
-    Plotly.newPlot('taskChart', [{
-      values: data.task_counts,
-      labels: ["Open", "In Progress", "Done"],
+    Plotly.newPlot('storyChart', [{
+      values: Object.values(data.story_counts),
+      labels: Object.keys(data.story_counts),
       type: 'pie',
-      marker: { colors: ["#f39c12", "#3498db", "#2ecc71"] }
+      marker: { colors: ["#f39c12", "#3498db", "#2ecc71", "#e74c3c", "#9b59b6"] }
     }], { height: 400, width: 500 });
 
-    Plotly.newPlot('ticketChart', [
+    Plotly.newPlot('taskChart', [
       {
-        x: data.ticket_dates,
-        y: data.tickets_created,
+        x: data.task_dates,
+        y: data.tasks_created,
         type: 'scatter',
         mode: 'lines+markers',
         name: 'Created',
         line: { color: '#e74c3c' }
       },
       {
-        x: data.ticket_dates,
-        y: data.tickets_resolved,
+        x: data.task_dates,
+        y: data.tasks_completed,
         type: 'scatter',
         mode: 'lines+markers',
-        name: 'Resolved',
+        name: 'Completed',
         line: { color: '#2ecc71' }
       }
     ], {
       height: 400,
       width: 800,
       xaxis: { title: 'Date' },
-      yaxis: { title: 'Tickets' }
+      yaxis: { title: 'Tasks' }
     });
 
     const feed = document.getElementById("activity-feed");

@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% block title %}Story Details - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Consistent styling from other pages */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  .story-detail-container {
+      max-width: 900px;
+      margin: 0 auto;
+  }
+
+  .story-header {
+      background-color: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+  }
+
+  .story-header h2 {
+      color: #172b4d;
+      margin-top: 0;
+  }
+
+  .story-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      color: #5e6c84;
+  }
+  .story-meta span {
+      font-weight: 500;
+  }
+  .story-meta strong {
+      color: #172b4d;
+  }
+
+  .discussion-section {
+      background-color: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  .discussion-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 1.5rem;
+  }
+
+  .discussion-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-top: 1px solid #dfe1e6;
+  }
+  .discussion-item:first-child {
+      border-top: none;
+  }
+
+  .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #0052cc;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+  }
+
+  .comment-body .author {
+      font-weight: 600;
+      color: #172b4d;
+  }
+  .comment-body .timestamp {
+      color: #5e6c84;
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+  }
+  .comment-body .message {
+      margin-top: 0.25rem;
+  }
+
+  .comment-form textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #dfe1e6;
+      border-radius: 6px;
+      resize: vertical;
+      min-height: 80px;
+  }
+  .comment-form button {
+      margin-top: 0.5rem;
+      float: right;
+  }
+  
+  .btn-primary {
+      background-color: #0052cc;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+  }
+  .btn-primary:hover {
+      background-color: #0041a8;
+  }
+</style>
+
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="main-content-area">
+        <div class="story-detail-container">
+            <div class="story-header">
+                <h2 id="story-title">Loading Story...</h2>
+                <div class="story-meta">
+                    <span><strong>Status:</strong> <span id="story-status">...</span></span>
+                    <span><strong>Priority:</strong> <span id="story-priority">...</span></span>
+                    <span><strong>Assignee:</strong> <span id="story-assignee">...</span></span>
+                    <span><strong>Due Date:</strong> <span id="story-due-date">...</span></span>
+                    <span><strong>Epic:</strong> <span id="story-epic">...</span></span>
+                </div>
+            </div>
+
+            <div class="discussion-section">
+                <h3>Discussion</h3>
+                <div class="comment-form">
+                    <form id="comment-form">
+                        <textarea id="comment-message" placeholder="Add a comment..." required></textarea>
+                        <button type="submit" class="btn-primary">Post Comment</button>
+                    </form>
+                </div>
+                <ul id="discussion-list" class="discussion-list">
+                    <!-- Comments will be loaded here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("access_token");
+    const storyId = "{{ story_id }}"; // Get story ID from Flask route
+
+    function requireAuth() {
+        if (!token) {
+            window.location.href = "{{ url_for('login_page') }}";
+            return null;
+        }
+        return token;
+    }
+
+    async function loadStoryDetails() {
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        try {
+            const res = await fetch(`/api/stories/${storyId}`, {
+                headers: { 'Authorization': 'Bearer ' + auth_token }
+            });
+            if (!res.ok) throw new Error('Failed to load story details.');
+            const story = await res.json();
+
+            document.getElementById('story-title').textContent = story.title;
+            document.getElementById('story-status').textContent = story.status;
+            document.getElementById('story-priority').textContent = story.priority;
+            document.getElementById('story-assignee').textContent = story.assignee_name || 'Unassigned';
+            document.getElementById('story-due-date').textContent = story.due_date;
+            document.getElementById('story-epic').textContent = story.epic_name || 'N/A';
+
+        } catch (err) {
+            document.getElementById('story-title').textContent = 'Error loading story';
+            console.error(err);
+        }
+    }
+
+    async function loadDiscussions() {
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        const discussionList = document.getElementById('discussion-list');
+        discussionList.innerHTML = '<li>Loading comments...</li>';
+
+        try {
+            const res = await fetch(`/api/stories/${storyId}/discussions`, {
+                headers: { 'Authorization': 'Bearer ' + auth_token }
+            });
+            if (!res.ok) throw new Error('Failed to load discussions.');
+            const discussions = await res.json();
+
+            discussionList.innerHTML = '';
+            if (discussions.length === 0) {
+                discussionList.innerHTML = '<li>No comments yet. Be the first to comment!</li>';
+                return;
+            }
+
+            discussions.forEach(comment => {
+                const li = document.createElement('li');
+                li.className = 'discussion-item';
+                const userInitial = comment.user_name ? comment.user_name.charAt(0).toUpperCase() : 'U';
+                
+                li.innerHTML = `
+                    <div class="avatar">${userInitial}</div>
+                    <div class="comment-body">
+                        <span class="author">${comment.user_name || 'Unknown User'}</span>
+                        <span class="timestamp">${comment.created_at}</span>
+                        <p class="message">${comment.message}</p>
+                    </div>
+                `;
+                discussionList.appendChild(li);
+            });
+        } catch (err) {
+            discussionList.innerHTML = `<li>Error loading comments: ${err.message}</li>`;
+            console.error(err);
+        }
+    }
+
+    document.getElementById('comment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const messageInput = document.getElementById('comment-message');
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        try {
+            const res = await fetch('/api/discussions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + auth_token
+                },
+                body: JSON.stringify({
+                    story_id: parseInt(storyId),
+                    message: message
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || 'Failed to post comment.');
+            }
+
+            messageInput.value = ''; // Clear textarea
+            loadDiscussions(); // Refresh the discussion list
+
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    });
+
+    window.onload = () => {
+        loadStoryDetails();
+        loadDiscussions();
+    };
+</script>
+{% endblock %}

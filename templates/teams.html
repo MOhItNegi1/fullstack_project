@@ -3,33 +3,103 @@
 
 {% block content %}
 <style>
-  .teams-container {
-    margin-left: 240px;
-    padding: 2rem;
+  /* Styles for main layout and sidebar (copied from kanban.html for consistency) */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
     background-color: #f4f6fa;
-    min-height: calc(100vh - 60px);
   }
 
-  h2, h3 {
-    margin-bottom: 1rem;
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  h2 {
+    color: #172b4d;
+    margin-bottom: 1.5rem;
   }
 
   .teams-actions {
     margin-bottom: 1.5rem;
   }
 
-  button {
-    margin-right: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #0052cc;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+  .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+      margin-right: 0.5rem;
   }
 
-  button:hover {
-    background-color: #003d99;
+  .btn-primary {
+      background-color: #0052cc;
+      color: white;
+  }
+  .btn-primary:hover {
+      background-color: #0041a8;
+  }
+  
+  .btn-secondary {
+      background-color: #f4f5f7;
+      color: #172b4d;
+      border: 1px solid #dfe1e6;
+  }
+  .btn-secondary:hover {
+      background-color: #ebedf0;
+  }
+
+  .btn-danger {
+      background-color: #de350b;
+      color: white;
+  }
+  .btn-danger:hover {
+      background-color: #bf2600;
   }
 
   table {
@@ -37,25 +107,39 @@
     border-collapse: collapse;
     background: white;
     margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
 
   th, td {
-    padding: 0.7rem 1rem;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid #dfe1e6;
+    text-align: left;
+    vertical-align: middle;
   }
 
   th {
-    background: #e9eef5;
+    background: #f4f5f7;
     font-weight: 600;
+    color: #5e6c84;
   }
 
   tr:last-child td {
     border-bottom: none;
   }
+  
+  td .btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+  }
 
   .error {
-    color: red;
+    color: #de350b;
     margin-top: 1rem;
+    background-color: #ffeded;
+    padding: 1rem;
+    border-radius: 6px;
   }
 
   .modal {
@@ -64,20 +148,22 @@
     z-index: 1050;
     left: 0;
     top: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-    padding-top: 5%;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
   }
 
   .modal-content {
     background-color: #fff;
-    margin: auto;
     padding: 2rem;
-    width: 400px;
+    width: 90%;
+    max-width: 450px;
     border-radius: 8px;
     position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
   }
 
   .modal-close {
@@ -85,84 +171,105 @@
     right: 1rem;
     top: 1rem;
     font-size: 1.5rem;
+    font-weight: bold;
+    color: #777;
     cursor: pointer;
+  }
+  .modal-close:hover {
+      color: #333;
   }
 
   label {
     display: block;
     margin-top: 1rem;
+    font-weight: 600;
+    color: #5e6c84;
   }
 
   select, input[type="text"] {
     width: 100%;
-    padding: 0.4rem;
-    margin-top: 0.2rem;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .modal-buttons {
+      margin-top: 1.5rem;
+      text-align: right;
   }
 
 </style>
 
-<!-- Sidebar Navigation -->
-<div class="dashboard-sidebar">
-  <h4>Navigation</h4>
-  <a href="/projects">Projects</a>
-  <a href="/teams">Teams</a>
-  <a href="#tickets">Tickets</a>
-  <a href="#sprints">Sprints</a>
-  <a href="#notifications">Notifications</a>
-  <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
-</div>
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+    </div>
 
-<!-- Main Teams Section -->
-<div class="teams-container">
-  <h2>Teams</h2>
-  <div class="teams-actions">
-    <button onclick="openModal('createTeamModal')">+ Create Team</button>
-  </div>
-  <div class="error" id="error-msg" style="display:none;"></div>
+    <!-- Main Teams Section -->
+    <div class="main-content-area">
+      <h2>Team Management</h2>
+      <div class="teams-actions">
+        <button class="btn btn-primary" onclick="openModal('createTeamModal')"><i class="fa-solid fa-plus"></i> Create Team</button>
+      </div>
+      <div class="error" id="error-msg" style="display:none;"></div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Team Name</th>
-        <th>Members</th>
-        <th>Projects</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="teams-tbody">
-      <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
-    </tbody>
-  </table>
+      <table>
+        <thead>
+          <tr>
+            <th>Team Name</th>
+            <th>Members</th>
+            <th>Epics</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="teams-tbody">
+          <tr><td colspan="4" style="text-align:center; padding: 2rem;">Loading teams...</td></tr>
+        </tbody>
+      </table>
+    </div>
 </div>
 
 <!-- Create Team Modal -->
 <div id="createTeamModal" class="modal">
   <div class="modal-content">
     <span class="modal-close" onclick="closeModal('createTeamModal')">&times;</span>
-    <h3>Create Team</h3>
-    <label>Team Name</label>
-    <input type="text" id="team-name" />
+    <h3>Create New Team</h3>
+    <label for="team-name">Team Name</label>
+    <input type="text" id="team-name" placeholder="e.g., Frontend Warriors" />
 
-    <label>Select Members</label>
+    <label for="member-select">Select Members</label>
     <select id="member-select" multiple></select>
 
-    <br/><br/>
-    <button onclick="submitTeam()">Create</button>
+    <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal('createTeamModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitTeam()">Create Team</button>
+    </div>
   </div>
 </div>
 
-<!-- Assign Project Modal -->
-<div id="assignProjectModal" class="modal">
+<!-- Assign Epic Modal -->
+<div id="assignEpicModal" class="modal">
   <div class="modal-content">
-    <span class="modal-close" onclick="closeModal('assignProjectModal')">&times;</span>
-    <h3>Assign Project</h3>
-    <label>Select Project</label>
-    <select id="project-select"></select>
+    <span class="modal-close" onclick="closeModal('assignEpicModal')">&times;</span>
+    <h3>Assign Epic to Team</h3>
+    <label for="epic-select">Select Epic</label>
+    <select id="epic-select"></select>
 
-    <br/><br/>
-    <button onclick="submitAssignProject()">Assign</button>
+    <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal('assignEpicModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAssignEpic()">Assign</button>
+    </div>
   </div>
 </div>
 
@@ -170,12 +277,14 @@
 <div id="addMembersModal" class="modal">
   <div class="modal-content">
     <span class="modal-close" onclick="closeModal('addMembersModal')">&times;</span>
-    <h3>Add Members</h3>
-    <label>Select Members</label>
+    <h3>Add Members to Team</h3>
+    <label for="new-member-select">Select Members</label>
     <select id="new-member-select" multiple></select>
 
-    <br/><br/>
-    <button onclick="submitAddMembers()">Add</button>
+    <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeModal('addMembersModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddMembers()">Add Members</button>
+    </div>
   </div>
 </div>
 
@@ -185,20 +294,20 @@ let selectedTeamId = null;
 function logout() {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user_info');
-  window.location.href = '/login';
+  window.location.href = '{{ url_for("login_page") }}';
 }
 
 function requireAuth() {
   const token = localStorage.getItem('access_token');
   if (!token) {
-    window.location.href = '/login';
+    window.location.href = '{{ url_for("login_page") }}';
     return null;
   }
   return token;
 }
 
 function openModal(id) {
-  document.getElementById(id).style.display = 'block';
+  document.getElementById(id).style.display = 'flex';
 }
 
 function closeModal(id) {
@@ -207,36 +316,51 @@ function closeModal(id) {
 
 async function loadTeamsAndDropdowns() {
   const token = requireAuth();
+  if (!token) return;
+  
   const headers = { 'Authorization': 'Bearer ' + token };
 
   try {
-    const res = await fetch('/teams/all', { headers });
-    if (!res.ok) throw new Error("Session expired. Please log in again.");
+    const res = await fetch('/api/teams/all', { headers });
+    if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Session expired. Please log in again.");
+    }
     const data = await res.json();
 
     const teams = data.teams || [];
     const users = data.users || [];
-    const projects = data.projects || [];
+    const epics = data.epics || [];
 
     // Load teams into table
     const tbody = document.getElementById("teams-tbody");
     tbody.innerHTML = "";
-    teams.forEach(team => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${team.name}</td>
-        <td>${team.members.join(", ") || "—"}</td>
-        <td>${team.projects.join(", ") || "—"}</td>
-        <td>
-          <button onclick="showAssignProject(${team.id})">Assign Project</button>
-          <button onclick="showAddMembers(${team.id})">Add Members</button>
-          <button onclick="deleteTeam(${team.id})" style="color: red;">Delete</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+    
+    if (teams.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 2rem;">No teams found. Create a team to get started.</td></tr>`;
+    } else {
+        teams.forEach(team => {
+          const tr = document.createElement("tr");
+          
+          // *** FIX START: Correctly map member objects to names before joining ***
+          const memberNames = team.members.map(member => member.name).join(", ");
+          // *** FIX END ***
 
-    // Populate members dropdown
+          tr.innerHTML = `
+            <td><strong>${team.name}</strong></td>
+            <td>${memberNames || "—"}</td>
+            <td>${team.epics.join(", ") || "—"}</td>
+            <td>
+              <button class="btn btn-secondary" onclick="showAssignEpic(${team.id})">Assign Epic</button>
+              <button class="btn btn-secondary" onclick="showAddMembers(${team.id})">Add Members</button>
+              <button class="btn btn-danger" onclick="deleteTeam(${team.id})">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+    }
+
+    // Populate members dropdowns in modals
     const memberSelect = document.getElementById("member-select");
     const newMemberSelect = document.getElementById("new-member-select");
     [memberSelect, newMemberSelect].forEach(select => {
@@ -244,19 +368,19 @@ async function loadTeamsAndDropdowns() {
       users.forEach(user => {
         const option = document.createElement("option");
         option.value = user.id;
-        option.textContent = user.name;
+        option.textContent = user.name || user.email; // Fallback to email if name is not set
         select.appendChild(option);
       });
     });
 
-    // Populate projects dropdown
-    const projectSelect = document.getElementById("project-select");
-    projectSelect.innerHTML = '<option value="">Select Project</option>';
-    projects.forEach(project => {
+    // Populate epics dropdown in modal
+    const epicSelect = document.getElementById("epic-select");
+    epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
+    epics.forEach(epic => {
       const option = document.createElement("option");
-      option.value = project.id;
-      option.textContent = project.name;
-      projectSelect.appendChild(option);
+      option.value = epic.id;
+      option.textContent = epic.name;
+      epicSelect.appendChild(option);
     });
 
   } catch (err) {
@@ -273,9 +397,13 @@ async function submitTeam() {
   };
 
   const name = document.getElementById("team-name").value;
-  const member_ids = Array.from(document.getElementById("member-select").selectedOptions).map(o => +o.value);
+  if (!name.trim()) {
+      alert("Team name cannot be empty.");
+      return;
+  }
+  const member_ids = Array.from(document.getElementById("member-select").selectedOptions).map(o => parseInt(o.value));
 
-  const res = await fetch('/teams', {
+  const res = await fetch('/api/teams', {
     method: "POST",
     headers,
     body: JSON.stringify({ name, member_ids })
@@ -283,36 +411,43 @@ async function submitTeam() {
 
   if (res.ok) {
     closeModal('createTeamModal');
+    document.getElementById("team-name").value = ''; // Clear input
     loadTeamsAndDropdowns();
   } else {
-    alert("Error creating team.");
+    const errData = await res.json();
+    alert("Error creating team: " + (errData.message || 'Unknown error'));
   }
 }
 
-function showAssignProject(teamId) {
+function showAssignEpic(teamId) {
   selectedTeamId = teamId;
-  openModal('assignProjectModal');
+  openModal('assignEpicModal');
 }
 
-async function submitAssignProject() {
+async function submitAssignEpic() {
   const token = requireAuth();
   const headers = {
     'Authorization': 'Bearer ' + token,
     'Content-Type': 'application/json'
   };
-  const project_id = +document.getElementById("project-select").value;
+  const epic_id = parseInt(document.getElementById("epic-select").value);
+  if (!epic_id) {
+      alert("Please select an epic.");
+      return;
+  }
 
-  const res = await fetch(`/teams/${selectedTeamId}/assign_project`, {
+  const res = await fetch(`/api/teams/${selectedTeamId}/assign_epic`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ project_id })
+    body: JSON.stringify({ epic_id })
   });
 
   if (res.ok) {
-    closeModal('assignProjectModal');
+    closeModal('assignEpicModal');
     loadTeamsAndDropdowns();
   } else {
-    alert("Error assigning project.");
+    const errData = await res.json();
+    alert("Error assigning epic: " + (errData.message || 'Unknown error'));
   }
 }
 
@@ -320,8 +455,36 @@ function showAddMembers(teamId) {
   selectedTeamId = teamId;
   openModal('addMembersModal');
 }
+
+async function submitAddMembers() {
+  const token = requireAuth();
+  const headers = {
+    'Authorization': 'Bearer ' + token,
+    'Content-Type': 'application/json'
+  };
+  const member_ids = Array.from(document.getElementById("new-member-select").selectedOptions).map(o => parseInt(o.value));
+  if (member_ids.length === 0) {
+      alert("Please select at least one member to add.");
+      return;
+  }
+
+  const res = await fetch(`/api/teams/${selectedTeamId}/members`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ member_ids })
+  });
+
+  if (res.ok) {
+    closeModal('addMembersModal');
+    loadTeamsAndDropdowns();
+  } else {
+    const errData = await res.json();
+    alert("Error adding members: " + (errData.message || 'Unknown error'));
+  }
+}
+
 async function deleteTeam(teamId) {
-  if (!confirm("Are you sure you want to delete this team? This action cannot be undone.")) return;
+  if (!confirm("Are you sure you want to delete this team? This will remove all member and epic associations. This action cannot be undone.")) return;
 
   const token = requireAuth();
   const headers = {
@@ -329,14 +492,13 @@ async function deleteTeam(teamId) {
   };
 
   try {
-    const res = await fetch(`/teams/${teamId}`, {
+    const res = await fetch(`/api/teams/${teamId}`, {
       method: "DELETE",
       headers
     });
 
     if (res.ok) {
-      alert("Team deleted successfully.");
-      loadTeams(); // refresh the team table
+      loadTeamsAndDropdowns();
     } else {
       const data = await res.json();
       alert("Error: " + (data.message || "Failed to delete team."));
@@ -347,31 +509,6 @@ async function deleteTeam(teamId) {
   }
 }
 
-
-async function submitAddMembers() {
-  const token = requireAuth();
-  const headers = {
-    'Authorization': 'Bearer ' + token,
-    'Content-Type': 'application/json'
-  };
-  const member_ids = Array.from(document.getElementById("new-member-select").selectedOptions).map(o => +o.value);
-
-  const res = await fetch(`/teams/${selectedTeamId}/members`, {
-    method: "PUT",
-    headers,
-    body: JSON.stringify({ member_ids })
-  });
-
-  if (res.ok) {
-    closeModal('addMembersModal');
-    loadTeamsAndDropdowns();
-  } else {
-    alert("Error adding members.");
-  }
-}
-
 window.onload = loadTeamsAndDropdowns;
 </script>
-
-
 {% endblock %}

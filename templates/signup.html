@@ -39,15 +39,16 @@
   document.getElementById("signupForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const name = document.getElementById("name").value;
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
     const role = document.getElementById("role").value;
     const message = document.getElementById("signupMessage");
 
-    const response = await fetch("/register_data", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, role })
+      body: JSON.stringify({ email, password, role, name })
     });
 
     const result = await response.json();
@@ -55,7 +56,7 @@
     if (response.ok) {
       message.style.color = "green";
       message.textContent = "✅ " + result.message;
-      setTimeout(() => window.location.href = "/login", 1200);
+      setTimeout(() => window.location.href = "{{ url_for('login_page') }}", 1200);
     } else {
       message.style.color = "red";
       message.textContent = "❌ " + result.message;

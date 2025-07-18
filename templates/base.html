@@ -106,8 +106,6 @@
       color: white;
       border: none;
     }
-
-   
   </style>
 </head>
 
@@ -167,13 +165,13 @@
 
         authButtons.innerHTML = `
           <span style="margin-right: 1rem; font-weight: 500; color: #333;">Hi, <strong>${username}</strong></span>
-          <a href="/profile" class="btn btn-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Profile</a>
+          <a href="{{ url_for('profile_page') }}" class="btn btn-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Profile</a>
           <button onclick="logout()" class="btn btn-outline-danger" style="padding: 0.4rem 0.9rem;">Logout</button>
         `;
       } else {
         authButtons.innerHTML = `
-          <a href="/login" class="btn btn-outline-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Login</a>
-          <a href="/register" class="btn btn-primary" style="padding: 0.4rem 0.9rem;">Try Free</a>
+          <a href="{{ url_for('login_page') }}" class="btn btn-outline-primary" style="margin-right: 0.5rem; padding: 0.4rem 0.9rem;">Login</a>
+          <a href="{{ url_for('register_page') }}" class="btn btn-primary" style="padding: 0.4rem 0.9rem;">Try Free</a>
         `;
       }
     }
@@ -184,8 +182,6 @@
       window.location.href = "/";
     };
   });
-
-
 </script>
 
 </body>

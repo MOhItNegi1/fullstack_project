@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+{% block title %}Overall Board Summary - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Styles for main layout and sidebar (copied from project.html/dashboard.html) */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+  }
+
+  /* Sub-navbar (will be hidden on this page, but styles kept for consistency) */
+  .sub-navbar {
+    position: fixed;
+    top: 60px; /* Below the main topbar */
+    left: 240px; /* To the right of the main sidebar */
+    width: calc(100% - 240px);
+    height: 60px; /* Height of the sub-navbar */
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    z-index: 999;
+  }
+
+  .sub-navbar a {
+    padding: 0.5rem 1rem;
+    margin-right: 1rem;
+    color: #5e6c84;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .sub-navbar a:hover {
+    background-color: #f4f6fa;
+    color: #1a1a1a;
+  }
+
+  .sub-navbar a.active {
+    background-color: #e6f4ff;
+    color: #0052cc;
+    font-weight: 600;
+  }
+
+  /* Summary specific styles */
+  .summary-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding-top: 2rem; /* No sub-navbar on this page, so less top padding */
+  }
+
+  .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .summary-header h2 {
+    color: #0052cc;
+    font-size: 1.8rem;
+  }
+
+  /* New: Top metric cards grid */
+  .metric-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    text-align: center;
+  }
+
+  .metric-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-card .label {
+    font-size: 0.9rem;
+    color: #5e6c84;
+  }
+
+  .metric-card .label i {
+    margin-right: 0.5rem;
+  }
+
+  /* Main content grid for charts and activity */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns */
+    gap: 2rem;
+  }
+
+  .chart-section, .activity-section, .types-of-work-section {
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .chart-section h4, .activity-section h4, .types-of-work-section h4 {
+    margin-bottom: 1rem;
+    color: #2d3748;
+    text-align: center;
+  }
+
+  /* Specific styles for Status Overview (donut chart) */
+  #overallStoryStatusChart {
+    height: 300px; /* Fixed height for donut chart */
+    width: 100%;
+  }
+
+  /* Specific styles for Recent Activity */
+  .activity-feed {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .activity-item {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  .activity-item:last-child {
+    border-bottom: none;
+  }
+
+  .activity-item .user-avatar {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    border-radius: 50%;
+    background-color: #0052cc;
+    color: white;
+    font-weight: 600;
+    text-align: center;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .activity-item .activity-text {
+    font-size: 0.95rem;
+    color: #333;
+  }
+
+  .activity-item .activity-text strong {
+    color: #1a1a1a;
+  }
+
+  .activity-item .activity-meta {
+    display: block;
+    font-size: 0.8rem;
+    color: #718096;
+    margin-top: 0.2rem;
+  }
+
+  /* Styles for Types of Work */
+  .types-of-work-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .types-of-work-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    font-size: 0.95rem;
+    color: #333;
+  }
+
+  .types-of-work-item .type-label {
+    flex-basis: 30%;
+    font-weight: 500;
+  }
+
+  .types-of-work-item .distribution-bar {
+    flex-grow: 1;
+    height: 10px;
+    background-color: #e2e8f0;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 0 0.5rem;
+  }
+
+  .types-of-work-item .distribution-fill {
+    height: 100%;
+    background-color: #0052cc; /* Blue fill */
+    border-radius: 5px;
+  }
+
+  .types-of-work-item .percentage {
+    flex-basis: 15%;
+    text-align: right;
+    font-weight: 600;
+  }
+</style>
+
+<div class="main-layout">
+  <!-- Sidebar Navigation -->
+  <div class="sidebar">
+    <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+    <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+    <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+    <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+    <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+    <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+    <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+    <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+  </div>
+
+  <div class="main-content-area">
+    <div class="summary-container">
+      <div class="summary-header">
+        <h2 id="board-summary-title">Overall Board Summary</h2>
+      </div>
+
+      <!-- New: Top Metric Cards -->
+      <div class="metric-cards-grid">
+        <div class="metric-card">
+          <div class="value" id="completed-7-days">...</div>
+          <div class="label"><i class="fas fa-check-circle" style="color: #2ecc71;"></i> completed <br>in the last 7 days</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="updated-7-days">...</div>
+          <div class="label"><i class="fas fa-edit" style="color: #3498db;"></i> updated <br>in the last 7 days</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="created-7-days">...</div>
+          <div class="label"><i class="fas fa-plus-circle" style="color: #f39c12;"></i> created <br>in the last 7 days</div>
+        </div>
+        <div class="metric-card">
+          <div class="value" id="due-soon-7-days">...</div>
+          <div class="label"><i class="fas fa-clock" style="color: #e74c3c;"></i> due soon <br>in the next 7 days</div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="chart-section">
+          <h4>Status overview</h4>
+          <p style="font-size: 0.9rem; color: #5e6c84; text-align: center;">Get a snapshot of the status of your work items. <a href="{{ url_for('stories_page') }}">View all work items</a></p>
+          <div id="overallStoryStatusChart"></div>
+          <div style="text-align: center; font-size: 1.5rem; font-weight: bold; color: #1a1a1a;">
+            <span id="total-work-items">...</span> Total work items
+          </div>
+        </div>
+
+        <div class="activity-section">
+          <h4>Recent activity</h4>
+          <p style="font-size: 0.9rem; color: #5e6c84; text-align: center;">Stay up to date with what's happening across the project.</p>
+          <ul id="overall-activity-feed" class="activity-feed">
+            <li>Loading...</li>
+          </ul>
+        </div>
+
+        <div class="chart-section">
+          <h4>Priority breakdown</h4>
+          <p style="font-size: 0.9rem; color: #5e6c84; text-align: center;">Get a holistic view of how work is being prioritized. <a href="#">See what your team's been focusing on</a></p>
+          <div id="overallStoryPriorityChart"></div>
+        </div>
+
+        <div class="types-of-work-section">
+          <h4>Types of work</h4>
+          <p style="font-size: 0.9rem; color: #5e6c84; text-align: center;">Get a breakdown of work items by their types. <a href="#">View all items</a></p>
+          <ul id="types-of-work-list" class="types-of-work-list">
+            <li>Loading...</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="chart-section" style="grid-column: 1 / -1; max-width: 960px; margin: 2rem auto;"> {# Stretches across two columns #}
+        <h4>Overall Story Creation vs Completion Trend</h4>
+        <div id="overallStoryTrendChart"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+  const token = localStorage.getItem("access_token");
+
+  function requireAuth() {
+    if (!token) {
+      window.location.href = "{{ url_for('login_page') }}";
+      return null;
+    }
+    return token;
+  }
+
+  async function loadBoardSummary() {
+    const auth_token = requireAuth();
+    if (!auth_token) return;
+
+    const headers = { "Authorization": "Bearer " + auth_token };
+    
+    try {
+      const res = await fetch(`/api/board-summary`, { // New API endpoint
+        headers: { "Authorization": "Bearer " + token }
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to fetch board summary.");
+      }
+      const data = await res.json();
+
+      // Top Metric Cards
+      document.getElementById("completed-7-days").textContent = data.completed_7_days;
+      document.getElementById("updated-7-days").textContent = data.updated_7_days;
+      document.getElementById("created-7-days").textContent = data.created_7_days;
+      document.getElementById("due-soon-7-days").textContent = data.due_soon_7_days;
+
+      // Status Overview (Donut Chart)
+      document.getElementById("total-work-items").textContent = data.total_work_items;
+      const storyStatusLabels = Object.keys(data.story_counts);
+      const storyStatusValues = Object.values(data.story_counts);
+      Plotly.newPlot('overallStoryStatusChart', [{
+        values: storyStatusValues,
+        labels: storyStatusLabels,
+        type: 'pie',
+        hole: .6, // Makes it a donut chart
+        marker: { colors: ["#f39c12", "#3498db", "#2ecc71", "#e74c3c", "#9b59b6"] } // Colors for To Do, In Progress, Done, Blocked, Review
+      }], { 
+        height: 300, 
+        width: 450, 
+        showlegend: true,
+        margin: { t: 20, b: 20, l: 20, r: 20 } // Adjust margins for better fit
+      });
+
+      // Recent Activity
+      const activityFeed = document.getElementById("overall-activity-feed");
+      activityFeed.innerHTML = "";
+      if (data.activities && data.activities.length > 0) {
+        data.activities.forEach(item => {
+          const li = document.createElement("li");
+          li.classList.add("activity-item");
+          const userInitial = item.user_name ? item.user_name.charAt(0).toUpperCase() : 'U';
+          const itemLink = item.item_id && item.item_type ? `<a href="/${item.item_type}s/${item.item_id}">${item.item_type.toUpperCase()}-${item.item_id}</a>` : ''; // Example link
+          const itemTitle = item.item_title ? `(${item.item_title})` : '';
+
+          li.innerHTML = `
+            <span class="user-avatar">${userInitial}</span>
+            <span class="activity-text"><strong>${item.user_name || 'Unknown'}:</strong> ${item.content} ${itemLink} ${itemTitle}</span>
+            <span class="activity-meta">${item.timestamp}</span>
+          `;
+          activityFeed.appendChild(li);
+        });
+      } else {
+        activityFeed.innerHTML = '<li class="empty-column">No recent activity.</li>';
+      }
+
+      // Priority Breakdown (Bar Chart)
+      const storyPriorityLabels = Object.keys(data.story_priority_counts);
+      const storyPriorityValues = Object.values(data.story_priority_counts);
+      Plotly.newPlot('overallStoryPriorityChart', [{
+        x: storyPriorityLabels,
+        y: storyPriorityValues,
+        type: 'bar',
+        marker: { color: ['#e74c3c', '#f39c12', '#2ecc71'] } // Red, Orange, Green for High, Medium, Low
+      }], { 
+        height: 300, 
+        width: 450, 
+        xaxis: { title: 'Priority' }, 
+        yaxis: { title: 'Number of Stories' },
+        margin: { t: 20, b: 60, l: 40, r: 20 } // Adjust margins
+      });
+
+      // Types of Work (List with progress bars)
+      const typesOfWorkList = document.getElementById("types-of-work-list");
+      typesOfWorkList.innerHTML = '';
+      const totalWorkItems = data.total_stories + data.total_tasks + data.total_epics; // Sum of all types
+      
+      if (totalWorkItems > 0) {
+          const workTypes = [
+              { label: 'Story', count: data.total_stories },
+              { label: 'Task', count: data.total_tasks },
+              { label: 'Epic', count: data.total_epics },
+              // { label: 'Subtask', count: data.total_subtasks || 0 } // If you add Subtasks later
+          ];
+
+          workTypes.forEach(type => {
+              if (type.count > 0) {
+                  const percentage = ((type.count / totalWorkItems) * 100).toFixed(0);
+                  const li = document.createElement('li');
+                  li.classList.add('types-of-work-item');
+                  li.innerHTML = `
+                      <span class="type-label">${type.label}</span>
+                      <div class="distribution-bar">
+                          <div class="distribution-fill" style="width: ${percentage}%;"></div>
+                      </div>
+                      <span class="percentage">${percentage}%</span>
+                  `;
+                  typesOfWorkList.appendChild(li);
+              }
+          });
+      } else {
+          typesOfWorkList.innerHTML = '<li class="empty-column">No work items to display.</li>';
+      }
+
+      // Overall Story Creation vs Completion Trend Chart (Line Chart)
+      Plotly.newPlot('overallStoryTrendChart', [
+        {
+          x: data.story_dates,
+          y: data.stories_created,
+          type: 'scatter',
+          mode: 'lines+markers',
+          name: 'Created',
+          line: { color: '#e74c3c' }
+        },
+        {
+          x: data.story_dates,
+          y: data.stories_completed,
+          type: 'scatter',
+          mode: 'lines+markers',
+          name: 'Completed',
+          line: { color: '#2ecc71' }
+        }
+      ], {
+        height: 400,
+        width: 800,
+        xaxis: { title: 'Date' },
+        yaxis: { title: 'Stories' },
+        title: 'Overall Story Creation & Completion Trend',
+        margin: { t: 50, b: 60, l: 60, r: 20 } // Adjust margins
+      });
+
+    } catch (err) {
+      document.getElementById("error-msg").textContent = err.message || "An error occurred loading the board summary.";
+      document.getElementById("error-msg").style.display = 'block';
+      console.error("Error loading board summary:", err);
+    }
+  }
+
+  window.onload = loadBoardSummary;
+</script>
+{% endblock %}
+

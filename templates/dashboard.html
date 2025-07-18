@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 {% block title %}Dashboard - Jira{% endblock %}
 
@@ -112,11 +111,11 @@
 <!-- Fixed Sidebar -->
 <div class="dashboard-sidebar">
   <h4>Navigation</h4>
-  <a href="/projects">Projects</a>
-  <a href="/teams">Teams</a>
-  <a href="/tickets">Tickets</a>
-  <a href="/sprints">Sprints</a>
-  <a href="/notifications">Notifications</a>
+  <a href="{{ url_for('epics_page') }}">Epics</a>
+  <a href="{{ url_for('team_page') }}">Teams</a>
+  <a href="{{ url_for('stories_page') }}">Stories</a>
+  <a href="{{ url_for('sprints_page') }}">Sprints</a>
+  <a href="{{ url_for('notifications_page') }}">Notifications</a>
   <a href="#" onclick="logout()" style="color:#cc0000; font-weight:600;">Logout</a>
 </div>
 
@@ -128,16 +127,16 @@
 
     <div class="widget-grid">
       <div class="widget">
-        <h4>Total Projects</h4>
-        <p id="project-count">...</p>
+        <h4>Total Epics</h4>
+        <p id="epic-count">...</p>
       </div>
       <div class="widget">
         <h4>Active Sprints</h4>
         <p id="sprint-count">...</p>
       </div>
       <div class="widget">
-        <h4>Open Tickets</h4>
-        <p id="ticket-count">...</p>
+        <h4>Open Stories</h4>
+        <p id="story-count">...</p>
       </div>
       <div class="widget">
         <h4>Notifications</h4>
@@ -145,18 +144,18 @@
       </div>
     </div>
 
-    <div class="section" id="tickets">
-      <h3>Recent Tickets</h3>
+    <div class="section" id="stories">
+      <h3>Recent Stories</h3>
       <table>
         <thead>
           <tr>
-            <th>Ticket ID</th>
+            <th>Story ID</th>
             <th>Title</th>
             <th>Status</th>
             <th>Priority</th>
           </tr>
         </thead>
-        <tbody id="tickets-tbody">
+        <tbody id="stories-tbody">
           <tr><td colspan="4" style="text-align:center;">Loading...</td></tr>
         </tbody>
       </table>
@@ -174,7 +173,7 @@ function logout() {
 function requireAuth() {
   const token = localStorage.getItem('access_token');
   if (!token) {
-    window.location.href = '/login';
+    window.location.href = '{{ url_for("login_page") }}';
     return null;
   }
   return token;
@@ -196,29 +195,29 @@ async function loadDashboard() {
 
   try {
     const headers = { 'Authorization': 'Bearer ' + token };
-    const [projectsRes, sprintsRes, ticketsRes] = await Promise.all([
-      fetch('/projects/all', { headers }),
-      fetch('/sprints/all', { headers }),
-      fetch('/tickets/all', { headers }),
+    const [epicsRes, sprintsRes, storiesRes] = await Promise.all([
+      fetch('/api/epics/all', { headers }),
+      fetch('/api/sprints/all', { headers }),
+      fetch('/api/stories/all', { headers }),
     ]);
 
-    if (!projectsRes.ok || !sprintsRes.ok || !ticketsRes.ok) {
+    if (!epicsRes.ok || !sprintsRes.ok || !storiesRes.ok) {
       throw new Error("Session expired. Please login again.");
     }
 
-    const [projects, sprints, tickets] = await Promise.all([
-      projectsRes.json(),
+    const [epics, sprints, stories] = await Promise.all([
+      epicsRes.json(),
       sprintsRes.json(),
-      ticketsRes.json()
+      storiesRes.json()
     ]);
 
-    setCount('project-count', projects.length || 0);
+    setCount('epic-count', epics.length || 0);
     setCount('sprint-count', sprints.length || 0);
-    setCount('ticket-count', tickets.length || 0);
+    setCount('story-count', stories.length || 0);
 
     let notifCount = '...';
     try {
-      const notifRes = await fetch('/notifications', { headers });
+      const notifRes = await fetch('/api/notifications', { headers });
       const notifs = await notifRes.json();
       notifCount = Array.isArray(notifs) ? notifs.filter(n => !n.is_read).length : '...';
     } catch (e) {
@@ -227,26 +226,26 @@ async function loadDashboard() {
 
     setCount('notif-count', notifCount);
 
-    const tbody = document.getElementById('tickets-tbody');
+    const tbody = document.getElementById('stories-tbody');
     tbody.innerHTML = '';
-    if (tickets.length > 0) {
-      tickets.slice(0, 5).forEach(ticket => {
+    if (stories.length > 0) {
+      stories.slice(0, 5).forEach(story => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${ticket.id}</td>
-          <td>${ticket.title}</td>
-          <td>${ticket.status ? 'Closed' : 'Open'}</td>
-          <td>${ticket.priority}</td>
+          <td>${story.id}</td>
+          <td>${story.title}</td>
+          <td>${story.status}</td>
+          <td>${story.priority}</td>
         `;
         tbody.appendChild(tr);
       });
     } else {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No tickets found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">No stories found.</td></tr>`;
     }
 
   } catch (err) {
     showError(err.message || "Failed to load dashboard. Please try again.");
-    setTimeout(() => { window.location.href = '/login'; }, 2000);
+    setTimeout(() => { window.location.href = '{{ url_for("login_page") }}'; }, 2000);
   }
 }
 

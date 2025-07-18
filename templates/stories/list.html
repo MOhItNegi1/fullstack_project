@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+{% block title %}Stories - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Consistent styling from other pages */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  h2 {
+    color: #172b4d;
+    margin-bottom: 1.5rem;
+  }
+
+  .actions-bar {
+    margin-bottom: 1.5rem;
+  }
+
+  .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      text-decoration: none;
+      display: inline-block;
+      border: none;
+      margin-right: 0.5rem;
+      transition: background-color 0.2s ease;
+  }
+
+  .btn-primary {
+      background-color: #0052cc;
+      color: white;
+  }
+  .btn-primary:hover {
+      background-color: #0041a8;
+  }
+  
+  .btn-secondary {
+      background-color: #f4f5f7;
+      color: #172b4d;
+      border: 1px solid #dfe1e6;
+  }
+  .btn-secondary:hover {
+      background-color: #ebedf0;
+  }
+
+  .btn-danger {
+      background-color: #de350b;
+      color: white;
+  }
+  .btn-danger:hover {
+      background-color: #bf2600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+
+  th, td {
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid #dfe1e6;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th {
+    background: #f4f5f7;
+    font-weight: 600;
+    color: #5e6c84;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+  
+  td .btn {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+  }
+  
+  .error {
+    color: #de350b;
+    margin-top: 1rem;
+    background-color: #ffeded;
+    padding: 1rem;
+    border-radius: 6px;
+    display: none; /* Hidden by default */
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .modal-close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #777;
+    cursor: pointer;
+  }
+  .modal-close:hover {
+      color: #333;
+  }
+
+  .modal-content label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+    color: #5e6c84;
+  }
+
+  .modal-content input,
+  .modal-content select {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  
+  .modal-buttons {
+      margin-top: 1.5rem;
+      text-align: right;
+  }
+</style>
+
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="main-content-area">
+        <h2>Stories</h2>
+        <div class="error" id="error-msg"></div>
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="openCreateStoryModal()">+ Create Story</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Epic</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                    <th>Assignee</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="stories-tbody">
+                <tr><td colspan="8" style="text-align:center; padding: 2rem;">Loading stories...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create/Edit Story Modal -->
+<div class="modal" id="storyModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('storyModal')">&times;</span>
+    <h3 id="modal-title">Create New Story</h3>
+    <form id="storyForm">
+        <input type="hidden" id="story-id" />
+        <label for="title">Title</label>
+        <input type="text" id="title" required />
+
+        <label for="priority">Priority</label>
+        <select id="priority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+
+        <label for="status">Status</label>
+        <select id="status">
+            <option value="To Do">To Do</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Blocked">Blocked</option>
+            <option value="Done">Done</option>
+        </select>
+
+        <label for="due-date">Due Date</label>
+        <input type="date" id="due-date" required />
+
+        <label for="epic-select">Epic</label>
+        <select id="epic-select" required></select>
+
+        <label for="assignee-select">Assignee</label>
+        <select id="assignee-select"></select>
+
+        <div class="modal-buttons">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('storyModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="modal-submit-btn">Create Story</button>
+        </div>
+    </form>
+  </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("access_token");
+    let allEpics = [];
+    let allUsers = [];
+
+    function requireAuth() {
+        if (!token) {
+            window.location.href = "{{ url_for('login_page') }}";
+            return null;
+        }
+        return token;
+    }
+
+    function openModal(id) { document.getElementById(id).style.display = "flex"; }
+    function closeModal(id) { document.getElementById(id).style.display = "none"; }
+    function showError(message) {
+        const errorDiv = document.getElementById("error-msg");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+    }
+
+    async function loadStories() {
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+        const headers = { 'Authorization': 'Bearer ' + auth_token };
+
+        try {
+            const [storiesRes, epicsRes, usersRes] = await Promise.all([
+                fetch("/api/stories/all", { headers }),
+                fetch("/api/epics/all", { headers }),
+                fetch("/api/users/all", { headers })
+            ]);
+
+            if (!storiesRes.ok) throw new Error("Failed to load stories.");
+            if (!epicsRes.ok) throw new Error("Failed to load epics.");
+            if (!usersRes.ok) throw new Error("Failed to load users.");
+            
+            const stories = await storiesRes.json();
+            allEpics = await epicsRes.json();
+            allUsers = await usersRes.json();
+
+            const tbody = document.getElementById("stories-tbody");
+            tbody.innerHTML = "";
+
+            if (stories.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 2rem;">No stories found. Create one to get started.</td></tr>`;
+                return;
+            }
+
+            stories.forEach(story => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${story.id}</td>
+                    <td><a href="/stories/${story.id}" style="font-weight: 600; text-decoration: none;">${story.title}</a></td>
+                    <td>${story.epic_name || 'N/A'}</td>
+                    <td>${story.priority}</td>
+                    <td>${story.status}</td>
+                    <td>${story.due_date}</td>
+                    <td>${story.assignee_name || 'Unassigned'}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="openEditStoryModal(${story.id})">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteStory(${story.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (err) {
+            showError(err.message);
+        }
+    }
+
+    function populateModalDropdowns(story = null) {
+        const epicSelect = document.getElementById("epic-select");
+        epicSelect.innerHTML = '<option value="" disabled selected>Select an Epic</option>';
+        allEpics.forEach(epic => {
+            const option = document.createElement("option");
+            option.value = epic.id;
+            option.textContent = epic.name;
+            if (story && story.epic_id === epic.id) option.selected = true;
+            epicSelect.appendChild(option);
+        });
+
+        const assigneeSelect = document.getElementById("assignee-select");
+        assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
+        allUsers.forEach(user => {
+            const option = document.createElement("option");
+            option.value = user.id;
+            option.textContent = user.name || user.email;
+            if (story && story.assignee_id === user.id) option.selected = true;
+            assigneeSelect.appendChild(option);
+        });
+    }
+
+    function openCreateStoryModal() {
+        document.getElementById("storyForm").reset();
+        document.getElementById("story-id").value = "";
+        document.getElementById("modal-title").textContent = "Create New Story";
+        document.getElementById("modal-submit-btn").textContent = "Create Story";
+        document.getElementById("status").style.display = 'none'; // Hide status on create
+        document.querySelector('label[for="status"]').style.display = 'none';
+        populateModalDropdowns();
+        openModal('storyModal');
+    }
+
+    async function openEditStoryModal(id) {
+        document.getElementById("storyForm").reset();
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        try {
+            const res = await fetch(`/api/stories/${id}`, { headers: { 'Authorization': 'Bearer ' + auth_token } });
+            if (!res.ok) throw new Error('Could not fetch story details.');
+            const story = await res.json();
+
+            document.getElementById("modal-title").textContent = "Edit Story";
+            document.getElementById("modal-submit-btn").textContent = "Save Changes";
+            document.getElementById("story-id").value = story.id;
+            document.getElementById("title").value = story.title;
+            document.getElementById("priority").value = story.priority;
+            document.getElementById("status").value = story.status;
+            document.getElementById("due-date").value = story.due_date;
+            document.getElementById("status").style.display = 'block'; // Show status on edit
+            document.querySelector('label[for="status"]').style.display = 'block';
+
+            populateModalDropdowns(story);
+            openModal('storyModal');
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    }
+
+    document.getElementById("storyForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("story-id").value;
+        const url = id ? `/api/stories/${id}` : "/api/stories";
+        const method = id ? "PUT" : "POST";
+
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        const body = {
+            title: document.getElementById("title").value,
+            priority: document.getElementById("priority").value,
+            status: document.getElementById("status").value,
+            due_date: document.getElementById("due-date").value,
+            epic_id: parseInt(document.getElementById("epic-select").value),
+            assignee_id: document.getElementById("assignee-select").value ? parseInt(document.getElementById("assignee-select").value) : null
+        };
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + auth_token
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || `Failed to ${id ? 'update' : 'create'} story.`);
+            }
+
+            closeModal('storyModal');
+            loadStories();
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    });
+
+    async function deleteStory(id) {
+        if (!confirm("Are you sure you want to delete this story? This action cannot be undone.")) return;
+        const auth_token = requireAuth();
+        if (!auth_token) return;
+
+        try {
+            const res = await fetch(`/api/stories/${id}`, {
+                method: "DELETE",
+                headers: { 'Authorization': 'Bearer ' + auth_token }
+            });
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.message || 'Failed to delete story.');
+            }
+            loadStories();
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    }
+
+    window.onload = loadStories;
+</script>
+{% endblock %}

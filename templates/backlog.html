@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+{% block title %}Backlog - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Styles for main layout and sidebar (copied from project.html/dashboard.html) */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px; /* below the header */
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c; /* Dark background for sidebar */
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: block;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+  }
+
+  .main-content-area {
+    margin-left: 240px; /* Accounts for fixed sidebar */
+    width: calc(100% - 240px);
+  }
+
+  /* New styles for sub-navigation (copied from kanban.html) */
+  .sub-navbar {
+    position: fixed;
+    top: 60px; /* Below the main topbar */
+    left: 240px; /* To the right of the main sidebar */
+    width: calc(100% - 240px);
+    height: 60px; /* Height of the sub-navbar */
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    z-index: 999; /* Below main topbar but above content */
+  }
+
+  .sub-navbar a {
+    padding: 0.5rem 1rem;
+    margin-right: 1rem;
+    color: #5e6c84;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .sub-navbar a:hover {
+    background-color: #f4f6fa;
+    color: #1a1a1a;
+  }
+
+  .sub-navbar a.active {
+    background-color: #e6f4ff;
+    color: #0052cc;
+    font-weight: 600;
+  }
+
+  /* Backlog specific styles */
+  .backlog-content {
+    padding: 2rem;
+    padding-top: 5rem; /* Space for sub-navbar */
+    background-color: #f4f6fa;
+    min-height: calc(100vh - 60px);
+  }
+
+  .backlog-content h2 {
+    margin-bottom: 1.5rem;
+    color: #2d3748;
+  }
+
+  .backlog-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  .backlog-table th, .backlog-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e0e6ed;
+    text-align: left;
+  }
+
+  .backlog-table th {
+    background: #e8eef7;
+    font-weight: 600;
+  }
+
+  .backlog-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .backlog-table .action-btns button {
+    margin-right: 5px;
+  }
+
+  .empty-backlog {
+    text-align: center;
+    color: #718096;
+    padding: 1rem;
+    font-style: italic;
+  }
+
+  .error-message {
+    color: #cc0000;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  /* Modal Styles (from kanban.html for consistency) */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 1.5rem;
+    width: 500px;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  .modal-content label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+  }
+
+  .modal-content input,
+  .modal-content select,
+  .modal-content textarea {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .modal-close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 20px;
+  }
+
+  .modal-buttons {
+    margin-top: 20px;
+    text-align: right;
+  }
+
+  .modal-buttons button {
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-left: 10px;
+  }
+
+  .modal-buttons .btn-primary {
+    background-color: #0052cc;
+    color: white;
+    border: none;
+  }
+
+  .modal-buttons .btn-secondary {
+    background-color: #e2e8f0;
+    color: #4a5568;
+    border: none;
+  }
+</style>
+
+<div class="main-layout">
+  <!-- Sidebar Navigation -->
+  <div class="sidebar">
+    <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+    <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+    <a href="{{ url_for('epics_page') }}"><i class="fa-solid fa-folder-open"></i> Epics</a>
+    <a href="{{ url_for('team_page') }}"><i class="fa-solid fa-users"></i> Teams</a>
+    <a href="{{ url_for('stories_page') }}"><i class="fa-solid fa-ticket"></i> Stories</a>
+    <a href="{{ url_for('tasks_page') }}"><i class="fa-solid fa-list-check"></i> Tasks</a>
+    <a href="{{ url_for('sprints_page') }}"><i class="fa-solid fa-bolt"></i> Sprints</a>
+    <a href="{{ url_for('notifications_page') }}"><i class="fa-solid fa-bell"></i> Notifications</a>
+    <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+  </div>
+
+  <div class="main-content-area">
+    <div class="sub-navbar">
+      <a href="{{ url_for('epic_summary_page', id=epic_id) }}" class="nav-link {% if not request.args.get('view') or request.args.get('view') == 'summary' %}active{% endif %}">Summary</a>
+      <a href="{{ url_for('kanban_page', id=epic_id) }}" class="nav-link {% if request.args.get('view') == 'board' %}active{% endif %}">Board</a>
+      <a href="{{ url_for('backlog_page', id=epic_id) }}" class="nav-link {% if request.args.get('view') == 'backlog' %}active{% endif %}">Backlog</a>
+    </div>
+
+    <div class="backlog-content">
+      <h2 id="backlog-title">Product Backlog</h2>
+      <div id="error-msg" class="error-message" style="display:none;"></div>
+
+      <button onclick="openCreateStoryModal()" style="margin-bottom: 15px;">+ Create New Story</button>
+
+      <table class="backlog-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Epic</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>Assignee</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="backlog-tbody">
+          <tr><td colspan="8" class="empty-backlog">Loading backlog items...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Create Story Modal (reused from kanban.html) -->
+<div class="modal" id="createStoryModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('createStoryModal')">&times;</span>
+    <h3>Create New Story</h3>
+
+    <label for="create-story-title">Title</label>
+    <input type="text" id="create-story-title" required />
+
+    <label for="create-story-priority">Priority</label>
+    <select id="create-story-priority">
+      <option value="Low">Low</option>
+      <option value="Medium">Medium</option>
+      <option value="High">High</option>
+    </select>
+
+    <label for="create-story-due">Due Date</label>
+    <input type="date" id="create-story-due" required />
+
+    <label for="create-story-epic">Epic</label>
+    <select id="create-story-epic" required></select>
+
+    <label for="create-story-assignee">Assignee</label>
+    <select id="create-story-assignee"></select>
+
+    <div class="modal-buttons">
+      <button class="btn-secondary" onclick="closeModal('createStoryModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitCreateStory()">Create Story</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Story Modal (reused from stories/list.html) -->
+<div class="modal" id="editStoryModal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('editStoryModal')">&times;</span>
+    <h3>Edit Story</h3>
+
+    <input type="hidden" id="edit-id" />
+
+    <label>Title</label>
+    <input type="text" id="edit-title" />
+
+    <label>Priority</label>
+    <select id="edit-priority">
+      <option value="Low">Low</option>
+      <option value="Medium">Medium</option>
+      <option value="High">High</option>
+    </select>
+
+    <label>Status</label>
+    <select id="edit-status">
+      <option value="To Do">To Do</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Done">Done</option>
+      <option value="Blocked">Blocked</option>
+    </select>
+
+    <label>Due Date</label>
+    <input type="date" id="edit-due" />
+
+    <label>Epic</label>
+    <select id="edit-epic"></select>
+
+    <label>Assignee</label>
+    <select id="edit-assignee"></select>
+
+    <div class="modal-buttons">
+      <button class="btn-secondary" onclick="closeModal('editStoryModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitEditStory()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+const token = localStorage.getItem("access_token");
+const urlParams = new URLSearchParams(window.location.search);
+const epicIdFromUrl = urlParams.get("id");
+
+function requireAuth() {
+  if (!token) {
+    window.location.href = "{{ url_for('login_page') }}";
+    return null;
+  }
+  return token;
+}
+
+function openModal(id) {
+  document.getElementById(id).style.display = "flex";
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = "none";
+}
+
+let allEpics = [];
+let allUsers = [];
+
+async function loadBacklog() {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  const headers = { "Authorization": "Bearer " + auth_token };
+  const errorMsgDiv = document.getElementById("error-msg");
+  const tbody = document.getElementById("backlog-tbody");
+  tbody.innerHTML = `<tr><td colspan="8" class="empty-backlog">Loading backlog items...</td></tr>`;
+
+  try {
+    const [storiesRes, epicsRes, usersRes] = await Promise.all([
+      fetch("/api/stories/all", { headers }),
+      fetch("/api/epics/all", { headers }),
+      fetch("/api/users/all", { headers })
+    ]);
+
+    if (!storiesRes.ok) throw new Error("Failed to fetch stories.");
+    if (!epicsRes.ok) throw new Error("Failed to fetch epics.");
+    if (!usersRes.ok) throw new Error("Failed to fetch users.");
+
+    const stories = await storiesRes.json();
+    allEpics = await epicsRes.json();
+    allUsers = await usersRes.json();
+
+    // Filter stories by epicIdFromUrl if present, and only show non-Done stories
+    const filteredStories = stories.filter(story => {
+      const isForCurrentEpic = !epicIdFromUrl || story.epic_id == epicIdFromUrl;
+      const isNotDone = story.status !== 'Done'; // Backlog usually excludes 'Done' items
+      return isForCurrentEpic && isNotDone;
+    });
+
+    tbody.innerHTML = ''; // Clear loading message
+
+    if (filteredStories.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-backlog">No backlog items found for this Epic.</td></tr>`;
+      return;
+    }
+
+    filteredStories.forEach(story => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${story.id}</td>
+        <td>${story.title}</td>
+        <td>${story.epic_name || 'N/A'}</td>
+        <td>${story.priority}</td>
+        <td>${story.status}</td>
+        <td>${story.due_date}</td>
+        <td>${story.assignee_name || 'N/A'}</td>
+        <td class="action-btns">
+          <button onclick="editStory(${story.id})">Edit</button>
+          <button onclick="deleteStory(${story.id})" style="color:red;">Delete</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Update backlog title if filtered by epic
+    if (epicIdFromUrl) {
+        const epic = allEpics.find(e => e.id == epicIdFromUrl);
+        if (epic) {
+            document.getElementById('backlog-title').textContent = `Backlog for Epic: ${epic.name}`;
+        }
+    }
+
+  } catch (err) {
+    errorMsgDiv.textContent = err.message || "An error occurred loading the backlog.";
+    errorMsgDiv.style.display = 'block';
+    console.error("Error loading backlog:", err);
+  }
+}
+
+// --- Story Creation Functions (reused from kanban.html) ---
+function openCreateStoryModal() {
+  const epicSelect = document.getElementById("create-story-epic");
+  epicSelect.innerHTML = '';
+  const epicsToDisplay = epicIdFromUrl 
+    ? allEpics.filter(e => e.id == epicIdFromUrl) 
+    : allEpics;
+
+  epicsToDisplay.forEach(epic => {
+    const option = document.createElement("option");
+    option.value = epic.id;
+    option.textContent = epic.name;
+    if (epicIdFromUrl && epic.id == epicIdFromUrl) {
+      option.selected = true;
+      epicSelect.disabled = true;
+    }
+    epicSelect.appendChild(option);
+  });
+
+  const assigneeSelect = document.getElementById("create-story-assignee");
+  assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
+  allUsers.forEach(user => {
+    const option = document.createElement("option");
+    option.value = user.id;
+    option.textContent = user.name || user.email;
+    assigneeSelect.appendChild(option);
+  });
+
+  openModal('createStoryModal');
+}
+
+async function submitCreateStory() {
+  const auth_token = requireAuth();
+  if (!auth_token) return;
+
+  const title = document.getElementById("create-story-title").value.trim();
+  const priority = document.getElementById("create-story-priority").value;
+  const due_date = document.getElementById("create-story-due").value;
+  const epic_id_val = document.getElementById("create-story-epic").value;
+  const assignee_id = document.getElementById("create-story-assignee").value || null;
+
+  if (!title || !due_date || !epic_id_val) {
+    alert("Please fill in all required fields (Title, Due Date, Epic).");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/stories", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + auth_token
+      },
+      body: JSON.stringify({
+        title,
+        priority,
+        due_date,
+        epic_id: parseInt(epic_id_val),
+        assignee_id: assignee_id ? parseInt(assignee_id) : null,
+        status: "To Do"
+      })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Failed to create story.");
+    }
+
+    alert("Story created successfully!");
+    closeModal('createStoryModal');
+    document.getElementById('createStoryModal').querySelector('form').reset();
+    loadBacklog(); // Reload backlog to show new story
+  } catch (err) {
+    alert("Error creating story: " + err.message);
+    console.error("Story creation failed:", err);
+  }
+}
+
+// --- Edit/Delete Story Functions (reused from stories/list.html) ---
+async function editStory(id) {
+  const headers = { Authorization: "Bearer " + requireAuth() };
+  const res = await fetch(`/api/stories/${id}`, { headers });
+  const data = await res.json();
+
+  document.getElementById("edit-id").value = data.id;
+  document.getElementById("edit-title").value = data.title;
+  document.getElementById("edit-priority").value = data.priority;
+  document.getElementById("edit-status").value = data.status;
+  document.getElementById("edit-due").value = data.due_date;
+
+  const epicSelect = document.getElementById("edit-epic");
+  epicSelect.innerHTML = '';
+  allEpics.forEach(epic => {
+    const option = document.createElement("option");
+    option.value = epic.id;
+    option.textContent = epic.name;
+    if (epic.id === data.epic_id) {
+      option.selected = true;
+    }
+    epicSelect.appendChild(option);
+  });
+
+  const assigneeSelect = document.getElementById("edit-assignee");
+  assigneeSelect.innerHTML = '<option value="">Unassigned</option>';
+  allUsers.forEach(user => {
+    const option = document.createElement("option");
+    option.value = user.id;
+    option.textContent = user.name || user.email;
+    if (user.id === data.assignee_id) {
+      option.selected = true;
+    }
+    assigneeSelect.appendChild(option);
+  });
+
+  openModal("editStoryModal");
+}
+
+async function submitEditStory() {
+  const id = document.getElementById("edit-id").value;
+  const headers = {
+    Authorization: "Bearer " + requireAuth(),
+    "Content-Type": "application/json"
+  };
+
+  const body = JSON.stringify({
+    title: document.getElementById("edit-title").value,
+    priority: document.getElementById("edit-priority").value,
+    status: document.getElementById("edit-status").value,
+    due_date: document.getElementById("edit-due").value,
+    epic_id: document.getElementById("edit-epic").value,
+    assignee_id: document.getElementById("edit-assignee").value || null
+  });
+
+  const res = await fetch(`/api/stories/${id}`, {
+    method: "PUT",
+    headers,
+    body
+  });
+
+  if (res.ok) {
+    closeModal("editStoryModal");
+    loadBacklog();
+  } else {
+    alert("Failed to update story.");
+  }
+}
+
+async function deleteStory(id) {
+  if (!confirm("Are you sure you want to delete this story?")) return;
+
+  const res = await fetch(`/api/stories/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: "Bearer " + requireAuth() }
+  });
+
+  const result = await res.json();
+
+  if (res.ok) {
+    loadBacklog();
+  } else {
+    alert(result.message || "You are not allowed to delete this story.");
+  }
+}
+
+
+window.onload = loadBacklog;
+</script>
+{% endblock %}
