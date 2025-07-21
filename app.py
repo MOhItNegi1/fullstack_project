@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:12345@localhost:5432/jira'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'super-secret'
-app.config['JWT_SECRET_KEY'] = 'your-jwt-secret-key' # Separate JWT key for better practice
+app.config['JWT_SECRET_KEY'] = 'jwt-secret-key' 
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -259,7 +259,7 @@ class Login(Resource):
         if not user or not check_password_hash(user.password, password):
             return {"message": "Invalid credentials"}, 401
 
-        user_roles = [ur.role.roles for ur in user.roles_assigned] # Adjusted relationship name
+        user_roles = [ur.role.roles for ur in user.roles_assigned] 
         if role not in user_roles:
             return {"message": "Invalid role for this user"}, 401
 
@@ -269,7 +269,6 @@ class Login(Resource):
             "user": {"id": user.id, "email": user.email, "roles": user_roles}
         }, 200
 
-# EPIC (formerly Project) Resources
 class EpicCreate(Resource):
     @jwt_required()
     def post(self):
