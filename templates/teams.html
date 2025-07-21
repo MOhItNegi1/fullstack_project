@@ -63,9 +63,15 @@
     padding: 2rem;
   }
 
-  h2 {
+  h2, h3 {
     color: #172b4d;
     margin-bottom: 1.5rem;
+  }
+
+  h3 {
+      margin-top: 2.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #dfe1e6;
   }
 
   .actions-bar {
@@ -245,6 +251,17 @@
           <tr><td colspan="4" style="text-align:center; padding: 2rem;">Loading teams...</td></tr>
         </tbody>
       </table>
+
+      <!-- START: NEW SECTION FOR TEAM JOIN REQUESTS -->
+      <div id="team-join-requests-section" class="mt-5" data-role="manager-admin" style="display: none;">
+          <h3>Pending Team Join Requests</h3>
+          <div class="requests-container">
+              <div id="team-requests-list">
+                  <p>Loading team join requests...</p>
+              </div>
+          </div>
+      </div>
+      <!-- END: NEW SECTION -->
     </div>
 </div>
 
@@ -376,7 +393,6 @@ async function loadTeamsAndDropdowns() {
         });
     }
 
-    // Populate dropdowns in modals (only if manager/admin)
     if (isManager || isAdmin) {
         const memberSelect = document.getElementById("member-select");
         const newMemberSelect = document.getElementById("new-member-select");
@@ -405,6 +421,7 @@ async function loadTeamsAndDropdowns() {
   }
 }
 
+// ... (submitTeam, showAssignEpic, submitAssignEpic, showAddMembers, submitAddMembers, deleteTeam functions are unchanged) ...
 async function submitTeam() {
   const auth_token = requireAuth();
   const headers = { 'Authorization': 'Bearer ' + auth_token, 'Content-Type': 'application/json' };
@@ -497,8 +514,65 @@ async function deleteTeam(teamId) {
   }
 }
 
+// START: NEW FUNCTIONS FOR TEAM JOIN REQUESTS
+async function loadTeamJoinRequests() {
+    const listDiv = document.getElementById('team-requests-list');
+    try {
+        const res = await fetch('/api/admin/team-join-requests', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) throw new Error('Could not load team join requests.');
+        
+        const requests = await res.json();
+        if (requests.length === 0) {
+            listDiv.innerHTML = '<p>No pending team join requests.</p>';
+            return;
+        }
+
+        let html = '<ul class="list-group list-group-flush">';
+        requests.forEach(req => {
+            html += `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>
+                        <strong>${req.user_name}</strong> has requested to join team <strong>"${req.team_name}"</strong>.
+                        <small class="d-block text-muted">Requested on: ${req.requested_at}</small>
+                    </span>
+                    <span>
+                        <button class="btn btn-sm btn-success" onclick="handleTeamRequest(${req.id}, 'approve')">Approve</button>
+                        <button class="btn btn-sm btn-danger" onclick="handleTeamRequest(${req.id}, 'reject')">Reject</button>
+                    </span>
+                </li>`;
+        });
+        html += '</ul>';
+        listDiv.innerHTML = html;
+
+    } catch (err) {
+        listDiv.innerHTML = `<p class="text-danger">${err.message}</p>`;
+    }
+}
+
+window.handleTeamRequest = async function(requestId, action) {
+    try {
+        const res = await fetch(`/api/admin/team-join-requests/${requestId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        
+        alert(data.message);
+        loadTeamJoinRequests(); // Refresh the list
+        loadTeamsAndDropdowns(); // Refresh the main teams table as well
+
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+// END: NEW FUNCTIONS
+
 function applyRoleBasedUI() {
-    if (!isManager && !isAdmin) {
+    if (isManager || isAdmin) {
+        document.getElementById('team-join-requests-section').style.display = 'block';
+    } else {
         document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
             el.style.display = 'none';
         });
@@ -510,6 +584,9 @@ window.onload = () => {
     requireAuth();
     applyRoleBasedUI();
     loadTeamsAndDropdowns();
+    if (isManager || isAdmin) {
+        loadTeamJoinRequests();
+    }
 };
 </script>
 {% endblock %}

@@ -58,7 +58,7 @@ class UserRoles(TimestampMixin, db.Model):
     user = db.relationship('User', backref='roles_assigned')
 
 
-# Renamed Project to Epic
+
 class Epic(TimestampMixin, db.Model):
     __tablename__ = 'epic'
     id = db.Column(db.Integer, primary_key=True)
@@ -71,7 +71,7 @@ class Epic(TimestampMixin, db.Model):
     stories = db.relationship('Story', backref='epic', lazy=True, cascade="all, delete-orphan")
 
 
-# Renamed Ticket to Story
+
 class Story(TimestampMixin, db.Model):
     __tablename__ = 'story'
     id = db.Column(db.Integer, primary_key=True)
@@ -81,7 +81,7 @@ class Story(TimestampMixin, db.Model):
     priority = db.Column(db.String(10), nullable=False)
     due_date = db.Column(db.DateTime, nullable=False)
     assignee_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    sprint_id = db.Column(db.Integer, db.ForeignKey('sprints.id'), nullable=True) # NEW: Link to Sprints
+    sprint_id = db.Column(db.Integer, db.ForeignKey('sprints.id'), nullable=True) 
 
     tasks = db.relationship('Task', backref='story', lazy=True, cascade="all, delete-orphan")
     discussions = db.relationship('StoryDiscussion', backref='story_discussion', lazy=True, cascade="all, delete-orphan")
@@ -162,6 +162,31 @@ class TeamMembers(TimestampMixin, db.Model):
 
     user = db.relationship('User', backref='team_memberships')
 
+class RoleRequest(TimestampMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    requested_role = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(50), default='pending', nullable=False) 
+    
+    user = db.relationship('User', backref='role_requests')
+
+class TeamJoinRequest(TimestampMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    team_id = db.Column(db.Integer, db.ForeignKey('team.id'), nullable=False)
+    status = db.Column(db.String(50), default='pending', nullable=False) # pending, approved, rejected
+
+    user = db.relationship('User', backref='team_join_requests')
+    team = db.relationship('Team', backref='join_requests')
+
+class PublicTeamList(Resource):
+    def get(self):
+        try:
+            teams = Team.query.order_by(Team.name).all()
+            return [{'id': team.id, 'name': team.name} for team in teams], 200
+        except Exception as e:
+            # In a real app, you'd want to log this error
+            return {'message': 'An internal error occurred'}, 500
 
 # ---------------------------------------------------------------------------------HELPER FUNCTIONS-----------------------------------------------------------------------------------------------
 def get_user_role(user_id):
@@ -220,54 +245,54 @@ class Register(Resource):
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role')
-        name = data.get('name') # Get name for UserProfile
+        name = data.get('name')
 
-        if not email or not password or not role:
-            return {"message": "Email, password, and role are required"}, 400
+        if not email or not password:
+            return {"message": "Email and password are required"}, 400
 
         if User.query.filter_by(email=email).first():
             return {"message": "User with this email already exists"}, 400
 
-        role_obj = Role.query.filter_by(roles=role).first()
-        if not role_obj:
-            return {"message": f"Role '{role}' does not exist"}, 400
+      
+        developer_role = Role.query.filter_by(roles='developer').first()
+        if not developer_role:
+            return {"message": "Default 'developer' role not found in database."}, 500
 
         hashed_password = generate_password_hash(password)
         new_user = User(email=email, password=hashed_password)
         db.session.add(new_user)
-        db.session.flush() # Flush to get user.id before commit
+        db.session.flush()
 
-        user_role = UserRoles(user_id=new_user.id, role_id=role_obj.id)
+        user_role = UserRoles(user_id=new_user.id, role_id=developer_role.id)
         db.session.add(user_role)
 
         profile = UserProfile(user_id=new_user.id, name=name)
         db.session.add(profile)
         db.session.commit()
 
-        return {"message": "Registered Successfully!"}, 201
+        return {"message": "Registered successfully! You have been assigned the Developer role."}, 201
+
+
+
 
 class Login(Resource):
     def post(self):
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
-        role = data.get('role')
 
         user = User.query.filter_by(email=email).first()
 
         if not user or not check_password_hash(user.password, password):
             return {"message": "Invalid credentials"}, 401
 
-        user_roles = [ur.role.roles for ur in user.roles_assigned] 
-        if role not in user_roles:
-            return {"message": "Invalid role for this user"}, 401
-
+        user_roles = [ur.role.roles for ur in user.roles_assigned]
         access_token = create_access_token(identity=str(user.id))
         return {
             "access_token": access_token,
             "user": {"id": user.id, "email": user.email, "roles": user_roles}
         }, 200
+
 
 class EpicCreate(Resource):
     @jwt_required()
@@ -357,7 +382,7 @@ class EpicDetail(Resource):
         create_notification(get_jwt_identity(), "Epic Deleted", f"Epic '{epic.name}' has been deleted.")
         return {"message": "Epic deleted successfully"}
 
-# STORY (formerly Ticket) Resources
+
 class StoryCreate(Resource):
     @jwt_required()
     @role_required(["manager", "admin"])
@@ -459,7 +484,6 @@ class StoryDetail(Resource):
         else:
             return {"message": "Not allowed to delete this story"}, 403
 
-# TASK (formerly Tasks) Resources
 class TaskCreate(Resource):
  
     @jwt_required()
@@ -521,7 +545,7 @@ class TaskList(Resource):
         } for t in tasks], 200
 
 class TaskDetail(Resource):
-    @jwt_required() # This must be the first decorator applied (closest to def)
+    @jwt_required() 
     def get(self, id):
         task = Task.query.get_or_404(id)
         return {
@@ -537,7 +561,7 @@ class TaskDetail(Resource):
             "assignee_name": task.assignee.profile.name if task.assignee and task.assignee.profile else task.assignee.email if task.assignee else None
         }
 
-    @jwt_required() # This must be the first decorator applied
+    @jwt_required() 
     @role_required(["manager", "admin"])
     def put(self, id):
         task = Task.query.get_or_404(id)
@@ -561,7 +585,7 @@ class TaskDetail(Resource):
         create_notification(task.assignee_id, "Task Updated", f"Task '{task.title}' status changed to {task.status}.")
         return {"message": "Task updated successfully"}
 
-    @jwt_required() # This must be the first decorator applied
+    @jwt_required() 
     @role_required(["manager","admin"])
     def delete(self, id):
         task = Task.query.get_or_404(id)
@@ -571,12 +595,11 @@ class TaskDetail(Resource):
         return {"message": "Task deleted successfully"}
 
     
-# discussion ke api, 
+
 class StoryDiscussionList(Resource):
     @jwt_required()
     def get(self, story_id):
         discussions = StoryDiscussion.query.filter_by(story_id=story_id).order_by(StoryDiscussion.created_at.asc()).all()
-        # This return statement is now more robust and will not crash if a user is missing.
         return [{
             "id": d.id,
             "user_id": d.user_id,
@@ -598,7 +621,6 @@ class DiscussionCreate(Resource):
             db.session.add(discussion)
             db.session.commit()
             
-            # Improvement: Notifies the story's assignee, not just the commenter
             story = Story.query.get(data['story_id'])
             if story and story.assignee_id and story.assignee_id != int(get_jwt_identity()):
                  create_notification(story.assignee_id, "Comment Added", f"A new comment was added to story: '{story.title}'.")
@@ -716,7 +738,6 @@ class SprintDetail(Resource):
         create_notification(get_jwt_identity(), "Sprint Deleted", f"Sprint '{s.sprint}' deleted.")
         return {"message": "Sprint deleted"}
 
-# Search Resource
 class Search(Resource):
     @jwt_required()
     def get(self, text):
@@ -730,7 +751,6 @@ class Search(Resource):
             "sprints": []
         }
 
-        # Determine filter scope
         if "admin" in user_roles or "manager" in user_roles:
             epic_ids_scope = None
             team_ids_scope = None
@@ -762,7 +782,6 @@ class Search(Resource):
             "deadline": p.deadline.strftime('%Y-%m-%d')
         } for p in epics]
 
-        # Stories (formerly Tickets)
         if epic_ids_scope is None:
             stories = Story.query.filter(Story.title.ilike(f"%{text}%")).all()
         else:
@@ -781,10 +800,9 @@ class Search(Resource):
         } for t in stories]
 
         # Tasks
-        if epic_ids_scope is None: # Admin/Manager - all tasks
+        if epic_ids_scope is None: 
             tasks = Task.query.filter(Task.title.ilike(f"%{text}%")).all()
-        else: # Developer - tasks related to their stories/epics
-             # Need to find stories associated with the current user's team's epics
+        else: 
             stories_in_scope_ids = db.session.query(Story.id).filter(Story.epic_id.in_(epic_ids_scope)).all()
             stories_in_scope_ids = [sid[0] for sid in stories_in_scope_ids]
 
@@ -821,7 +839,6 @@ class Search(Resource):
 
         return results, 200
 
-# User Profile and All Users (new)
 class ProfileResource(Resource):
     @jwt_required()
     def get(self):
@@ -851,12 +868,12 @@ class ProfileResource(Resource):
 
         profile.name = data.get("name", profile.name)
         profile.phone = data.get("phone", profile.phone)
-        profile.status = data.get("availability", profile.status) # Frontend sends 'availability'
+        profile.status = data.get("availability", profile.status) 
 
         db.session.commit()
         return {"message": "Profile updated"}, 200
 
-class AllUsersResource(Resource): # resource to get all users for dropdowns
+class AllUsersResource(Resource): 
     @jwt_required()
     def get(self):
         users = User.query.all()
@@ -864,12 +881,12 @@ class AllUsersResource(Resource): # resource to get all users for dropdowns
             {
                 "id": u.id,
                 "email": u.email,
-                "name": u.profile.name if u.profile else u.email # Return name if available, else email
+                "name": u.profile.name if u.profile else u.email 
             } for u in users
         ])
 
 
-# Epic Summary (formerly Project Summary)
+
 class EpicSummary(Resource):
     @jwt_required()
     def get(self, id):
@@ -885,18 +902,17 @@ class EpicSummary(Resource):
         members = db.session.query(UserProfile.name).filter(UserProfile.user_id.in_(member_ids)).all()
         team_member_names = [m.name for m in members if m.name]
 
-        # Story (formerly Ticket) status counts
         story_stats = db.session.query(Story.status, db.func.count(Story.id))\
                           .filter_by(epic_id=id)\
                           .group_by(Story.status).all()
-        story_counts = {"To Do": 0, "In Progress": 0, "Done": 0, "Blocked": 0, "Review": 0} # Example statuses
+        story_counts = {"To Do": 0, "In Progress": 0, "Done": 0, "Blocked": 0, "Review": 0} 
         for status_val, count in story_stats:
             if status_val in story_counts:
                 story_counts[status_val] += count
-            else: # Handle unexpected statuses
+            else: 
                 story_counts["To Do"] += count
 
-        # Task trend chart (based on tasks linked to stories in this epic)
+     
         task_query = db.session.query(
             db.func.date(Task.created_at),
             Task.status,
@@ -919,11 +935,10 @@ class EpicSummary(Resource):
         tasks_created = [task_date_map[d]["created"] for d in task_dates]
         tasks_completed = [task_date_map[d]["completed"] for d in task_dates]
 
-        # Activity log (notifications related to this epic or its stories/tasks)
         activity_log_raw = Notifications.query.filter(
             (Notifications.content.ilike(f"%epic {epic.name}%")) |
             (Notifications.content.ilike(f"%epic {epic.id}%")) |
-            (Notifications.type.ilike("%story%") & Notifications.content.ilike(f"%{epic.name}%")) # Simplified for demo
+            (Notifications.type.ilike("%story%") & Notifications.content.ilike(f"%{epic.name}%")) 
         ).order_by(Notifications.id.desc()).limit(10).all()
 
         activity_log = [{
@@ -979,22 +994,21 @@ class TeamList(Resource):
             if "admin" in user_roles or "manager" in user_roles:
                 teams = Team.query.all()
             else:
-                # Developers only see teams they are part of
+                
                 teams = [tm.team for tm in TeamMembers.query.filter_by(user_id=current_user_id).all() if tm.team]
 
-            users = User.query.all() # Fetch all users for dropdowns
-            epics = Epic.query.all() # Fetch all epics for dropdowns
+            users = User.query.all() 
+            epics = Epic.query.all() 
 
             team_data = []
             for team in teams:
-                # MODIFIED: Ensure members list includes ID and Name
                 members_list_for_frontend = [
                     {
                         "id": member.user.id,
                         "name": member.user.profile.name if member.user and member.user.profile else member.user.email
                     }
                     for member in team.members
-                    if member.user # Ensure user object exists
+                    if member.user 
                 ]
                 
                 epic_names = [
@@ -1005,7 +1019,7 @@ class TeamList(Resource):
                 team_data.append({
                     "id": team.id,
                     "name": team.name,
-                    "members": members_list_for_frontend, # Now a list of dicts {id, name}
+                    "members": members_list_for_frontend, 
                     "epics": epic_names
                 })
 
@@ -1050,10 +1064,10 @@ class AddTeamMembers(Resource):
         db.session.commit()
         return {"message": "Team members updated successfully"}, 200
 
-class RemoveTeamMember(Resource): # NEW RESOURCE
+class RemoveTeamMember(Resource): 
     @jwt_required()
     @role_required(["admin", "manager"])
-    def delete(self, team_id, user_id): # team_id and user_id in URL
+    def delete(self, team_id, user_id): 
         team_member = TeamMembers.query.filter_by(team_id=team_id, user_id=user_id).first()
         if not team_member:
             return {"message": "Team member not found in this team."}, 404
@@ -1061,26 +1075,26 @@ class RemoveTeamMember(Resource): # NEW RESOURCE
         try:
             db.session.delete(team_member)
             db.session.commit()
-            # Optional: Notify the removed user
+           
             create_notification(user_id, "Team Removal", f"You have been removed from team {team_member.team.name}.")
             return {"message": "Team member removed successfully."}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": f"Failed to remove team member: {str(e)}"}, 500
 
-class AssignTeamToEpic(Resource): # Changed from AssignTeamToProject
+class AssignTeamToEpic(Resource): 
     @jwt_required()
     @role_required(["admin", "manager"])
     def post(self, id):
         data = request.get_json()
-        epic_id = data.get("epic_id") # Changed from project_id
-        if not Epic.query.get(epic_id): # Changed from Project.query.get
+        epic_id = data.get("epic_id") 
+        if not Epic.query.get(epic_id): 
             return {"message": "Epic not found"}, 404
 
-        if TeamEpic.query.filter_by(team_id=id, epic_id=epic_id).first(): # Changed from TeamProject
+        if TeamEpic.query.filter_by(team_id=id, epic_id=epic_id).first(): 
             return {"message": "Team already assigned to this epic"}, 400
 
-        tp = TeamEpic(team_id=id, epic_id=epic_id) # Changed from TeamProject
+        tp = TeamEpic(team_id=id, epic_id=epic_id) 
         db.session.add(tp)
         db.session.commit()
         return {"message": "Team assigned to epic"}, 201
@@ -1092,15 +1106,15 @@ class DeleteTeam(Resource):
         team = Team.query.get_or_404(id)
 
         TeamMembers.query.filter_by(team_id=team.id).delete()
-        TeamEpic.query.filter_by(team_id=team.id).delete() # Changed from TeamProject
-        # Tasks.query.filter_by(team_id=team.id).delete() # Removed as Task is not directly linked to Team anymore
+        TeamEpic.query.filter_by(team_id=team.id).delete() 
+      
 
         db.session.delete(team)
         db.session.commit()
 
         return {"message": "Team deleted successfully"}, 200
 
-# Notification Resources (if you want CRUD for them)
+
 class NotificationsList(Resource):
     @jwt_required()
     def get(self):
@@ -1148,52 +1162,49 @@ class BoardSummaryResource(Resource):
             seven_days_ago = datetime.utcnow() - timedelta(days=7)
             seven_days_from_now = datetime.utcnow() + timedelta(days=7)
 
-            # Determine IDs in scope based on user role
             epic_ids_in_scope = []
             story_ids_in_scope = []
             task_ids_in_scope = []
-            user_ids_in_scope = [] # For notifications
+            user_ids_in_scope = [] 
 
             if "admin" in user_roles or "manager" in user_roles:
-                # Admins/Managers see everything
+              
                 epic_ids_in_scope = [e.id for e in db.session.query(Epic.id).all()]
                 story_ids_in_scope = [s.id for s in db.session.query(Story.id).all()]
                 task_ids_in_scope = [t.id for t in db.session.query(Task.id).all()]
                 user_ids_in_scope = [u.id for u in db.session.query(User.id).all()]
             else:
-                # Developers see only what's related to their teams/epics
+               
                 team_ids = [tm.team_id for tm in TeamMembers.query.filter_by(user_id=current_user_id).all()]
                 
-                if team_ids: # Only proceed if user is in any team
+                if team_ids: 
                     epic_ids_in_scope = [eid[0] for eid in db.session.query(TeamEpic.epic_id)
                                          .filter(TeamEpic.team_id.in_(team_ids)).distinct().all()]
                     
-                    if epic_ids_in_scope: # Only proceed if there are epics in scope
+                    if epic_ids_in_scope: 
                         story_ids_in_scope = [sid[0] for sid in db.session.query(Story.id)
                                               .filter(Story.epic_id.in_(epic_ids_in_scope)).all()]
                         
-                        if story_ids_in_scope: # Only proceed if there are stories in scope
+                        if story_ids_in_scope: 
                             task_ids_in_scope = [tid[0] for tid in db.session.query(Task.id)
                                                  .filter(Task.story_id.in_(story_ids_in_scope)).all()]
                 
-                user_ids_in_scope = [int(current_user_id)] # Developers only see their own notifications
+                user_ids_in_scope = [int(current_user_id)] 
 
-            # Set filter lists: if original list is empty, use [-1] to ensure .in_() always has an argument
-            # and effectively returns no results. This prevents SQL errors with empty IN () clauses.
-            # This is the crucial part that was causing the error when lists were empty.
+         
             epic_filter_ids = epic_ids_in_scope if epic_ids_in_scope else [-1]
             story_filter_ids = story_ids_in_scope if story_ids_in_scope else [-1]
             task_filter_ids = task_ids_in_scope if task_ids_in_scope else [-1]
             user_filter_ids = user_ids_in_scope if user_ids_in_scope else [-1]
 
 
-            # --- Overall Counts (using IDs in scope) ---
+           
             total_epics = Epic.query.filter(Epic.id.in_(epic_filter_ids)).count()
             total_stories = Story.query.filter(Story.id.in_(story_filter_ids)).count()
             total_tasks = Task.query.filter(Task.id.in_(task_filter_ids)).count()
             total_work_items = total_epics + total_stories + total_tasks
 
-            # --- Top Metric Cards Data (using IDs in scope) ---
+           
             completed_7_days = Story.query.filter(
                 Story.id.in_(story_filter_ids),
                 Story.status == 'Done',
@@ -1221,7 +1232,7 @@ class BoardSummaryResource(Resource):
                 Task.status != 'Done'
             ).count()
 
-            # --- Overall Epic Status Counts (using IDs in scope) ---
+            
             epic_status_stats = db.session.query(Epic.status, db.func.count(Epic.id))\
                                    .filter(Epic.id.in_(epic_filter_ids))\
                                    .group_by(Epic.status).all()
@@ -1232,7 +1243,7 @@ class BoardSummaryResource(Resource):
                 else:
                     epic_counts["To Do"] += count
 
-            # --- Overall Story Status Counts (using IDs in scope) ---
+            
             story_status_stats = db.session.query(Story.status, db.func.count(Story.id))\
                                   .filter(Story.id.in_(story_filter_ids))\
                                   .group_by(Story.status).all()
@@ -1243,7 +1254,6 @@ class BoardSummaryResource(Resource):
                 else:
                     story_counts["To Do"] += count
 
-            # --- Overall Story Priority Counts (using IDs in scope) ---
             story_priority_stats = db.session.query(Story.priority, db.func.count(Story.id))\
                                    .filter(Story.id.in_(story_filter_ids))\
                                    .group_by(Story.priority).all()
@@ -1254,7 +1264,7 @@ class BoardSummaryResource(Resource):
                 else:
                     story_priority_counts["Medium"] += count
 
-            # --- Overall Task Status Counts (using IDs in scope) ---
+         
             task_status_stats = db.session.query(Task.status, db.func.count(Task.id))\
                                    .filter(Task.id.in_(task_filter_ids))\
                                    .group_by(Task.status).all()
@@ -1265,7 +1275,7 @@ class BoardSummaryResource(Resource):
                 else:
                     task_counts["To Do"] += count
 
-            # --- Overall Stories Created vs Completed Trend (using IDs in scope) ---
+      
             story_trend_query = db.session.query(
                 db.func.date(Story.created_at),
                 Story.status,
@@ -1300,7 +1310,7 @@ class BoardSummaryResource(Resource):
             stories_created = [story_date_map[d]["created"] for d in story_dates]
             stories_completed = [story_date_map[d]["completed"] for d in story_dates]
 
-            # --- Recent Activity (Enhanced) ---
+ 
             recent_notifications = db.session.query(Notifications).filter(Notifications.user_id.in_(user_filter_ids))\
                                    .order_by(Notifications.created_at.desc()).limit(10).all()
             
@@ -1374,10 +1384,8 @@ class AdminUserRoleChange(Resource):
         if not new_role:
             return {'message': f'Role "{new_role_name}" does not exist.'}, 400
             
-        # Remove all existing roles for the user
         UserRoles.query.filter_by(user_id=user_id_to_change).delete()
         
-        # Add the new role
         new_user_role = UserRoles(user_id=user_id_to_change, role_id=new_role.id)
         db.session.add(new_user_role)
         db.session.commit()
@@ -1386,6 +1394,168 @@ class AdminUserRoleChange(Resource):
         
         return {'message': f"Successfully changed {user.email}'s role to {new_role_name}."}, 200
 
+class TeamJoinRequestResource(Resource):
+    @jwt_required()
+    def post(self):
+        data = request.get_json()
+        team_id = data.get('team_id')
+        current_user_id = get_jwt_identity()
+        
+        if not team_id:
+            return {'message': 'Team ID is required.'}, 400
+        
+        # Check if user is already in the team
+        is_member = TeamMembers.query.filter_by(user_id=current_user_id, team_id=team_id).first()
+        if is_member:
+            return {'message': 'You are already a member of this team.'}, 400
+
+        # Check for existing pending request
+        existing_request = TeamJoinRequest.query.filter_by(user_id=current_user_id, team_id=team_id, status='pending').first()
+        if existing_request:
+            return {'message': 'You already have a pending request to join this team.'}, 400
+
+        new_request = TeamJoinRequest(user_id=current_user_id, team_id=team_id)
+        db.session.add(new_request)
+        db.session.commit()
+
+        # Notify admins
+        admins = User.query.join(UserRoles).join(Role).filter(Role.roles == 'admin').all()
+        user = User.query.get(current_user_id)
+        team = Team.query.get(team_id)
+        for admin in admins:
+            create_notification(admin.id, "Team Join Request", f"User {user.profile.name or user.email} has requested to join team '{team.name}'.")
+
+        return {'message': 'Your request to join the team has been submitted.'}, 201
+
+class TeamJoinRequestListResource(Resource):
+    @jwt_required()
+    @role_required(['admin', 'manager'])
+    def get(self):
+        requests = TeamJoinRequest.query.filter_by(status='pending').order_by(TeamJoinRequest.created_at.desc()).all()
+        return [{
+            'id': req.id,
+            'user_id': req.user_id,
+            'user_name': req.user.profile.name if req.user.profile else req.user.email,
+            'team_id': req.team_id,
+            'team_name': req.team.name,
+            'requested_at': req.created_at.strftime('%Y-%m-%d %H:%M')
+        } for req in requests], 200
+
+class TeamJoinRequestActionResource(Resource):
+    @jwt_required()
+    @role_required(['admin', 'manager'])
+    def put(self, request_id):
+        data = request.get_json()
+        action = data.get('action') # 'approve' or 'reject'
+        
+        join_request = TeamJoinRequest.query.get_or_404(request_id)
+        if join_request.status != 'pending':
+            return {'message': 'This request has already been processed.'}, 400
+
+        if action == 'approve':
+            # Add user to the team
+            new_member = TeamMembers(user_id=join_request.user_id, team_id=join_request.team_id)
+            db.session.add(new_member)
+            join_request.status = 'approved'
+            db.session.commit()
+            
+            create_notification(join_request.user_id, "Team Request Approved", f"Your request to join team '{join_request.team.name}' has been approved.")
+            return {'message': f'User {join_request.user.profile.name} has been added to team {join_request.team.name}.'}, 200
+
+        elif action == 'reject':
+            join_request.status = 'rejected'
+            db.session.commit()
+            
+            create_notification(join_request.user_id, "Team Request Rejected", f"Your request to join team '{join_request.team.name}' has been rejected.")
+            return {'message': 'Request has been rejected.'}, 200
+        else:
+            return {'message': 'Invalid action.'}, 400
+
+class RoleRequestResource(Resource):
+    @jwt_required()
+    def post(self):
+        try:
+            current_user_id = get_jwt_identity()
+            user = User.query.get(current_user_id)
+            
+            user_roles = [r.role.roles for r in user.roles_assigned]
+            if 'developer' not in user_roles or 'manager' in user_roles or 'admin' in user_roles:
+                return {'message': 'Only developers can request a role upgrade.'}, 403
+                
+            existing_request = RoleRequest.query.filter_by(user_id=current_user_id, status='pending').first()
+            if existing_request:
+                return {'message': 'You already have a pending role upgrade request.'}, 400
+
+            new_request = RoleRequest(user_id=current_user_id, requested_role='manager')
+            db.session.add(new_request)
+            
+            admins = User.query.join(UserRoles).join(Role).filter(Role.roles == 'admin').all()
+            for admin in admins:
+                 create_notification(admin.id, "Role Request", f"User {user.profile.name or user.email} has requested to become a manager.")
+            
+            db.session.commit()
+            return {'message': 'Your request to become a manager has been submitted.'}, 201
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'An internal error occurred: {str(e)}'}, 500
+
+class RoleRequestListResource(Resource):
+    @jwt_required()
+    @role_required(['admin'])
+    def get(self):
+        try:
+            requests = RoleRequest.query.filter_by(status='pending').order_by(RoleRequest.created_at.desc()).all()
+            return [{
+                'id': req.id,
+                'user_id': req.user_id,
+                'user_name': req.user.profile.name if req.user.profile else req.user.email,
+                'requested_role': req.requested_role,
+                'requested_at': req.created_at.strftime('%Y-%m-%d %H:%M')
+            } for req in requests], 200
+        except Exception as e:
+            return {'message': f'An internal error occurred: {str(e)}'}, 500
+
+class RoleRequestActionResource(Resource):
+    @jwt_required()
+    @role_required(['admin'])
+    def put(self, request_id):
+        try:
+            data = request.get_json()
+            action = data.get('action')
+            
+            role_request = RoleRequest.query.get_or_404(request_id)
+            if role_request.status != 'pending':
+                return {'message': 'This request has already been processed.'}, 400
+
+            if action == 'approve':
+                manager_role = Role.query.filter_by(roles='manager').first()
+                if not manager_role:
+                    return {'message': 'Manager role not found in database.'}, 500
+                
+                # FIX: Correctly remove only the 'developer' role if it exists
+                developer_role = Role.query.filter_by(roles='developer').first()
+                if developer_role:
+                    UserRoles.query.filter_by(user_id=role_request.user_id, role_id=developer_role.id).delete()
+
+                # Add the new manager role
+                new_user_role = UserRoles(user_id=role_request.user_id, role_id=manager_role.id)
+                db.session.add(new_user_role)
+
+                role_request.status = 'approved'
+                create_notification(role_request.user_id, "Role Approved", "Your request to become a manager has been approved.")
+                db.session.commit()
+                return {'message': f'User {role_request.user.profile.name} has been promoted to manager.'}, 200
+
+            elif action == 'reject':
+                role_request.status = 'rejected'
+                create_notification(role_request.user_id, "Role Rejected", "Your request to become a manager has been rejected.")
+                db.session.commit()
+                return {'message': 'Request has been rejected.'}, 200
+            else:
+                return {'message': 'Invalid action.'}, 400
+        except Exception as e:
+            db.session.rollback()
+            return {'message': f'An internal error occurred: {str(e)}'}, 500
 # ------------------------------------------------------------------------------API RESOURCES REGISTRATION----------------------------------------------------------------------------------------------
 api.add_resource(Register, "/api/auth/register")
 api.add_resource(Login, "/api/auth/login")
@@ -1431,6 +1601,14 @@ api.add_resource(BoardSummaryResource, "/api/board-summary")
 
 api.add_resource(AdminUserRoleChange, '/api/admin/change-user-role')
 
+api.add_resource(RoleRequestResource, '/api/users/request-role-upgrade')
+api.add_resource(RoleRequestListResource, '/api/admin/role-requests')
+api.add_resource(RoleRequestActionResource, '/api/admin/role-requests/<int:request_id>')
+
+api.add_resource(TeamJoinRequestResource, '/api/teams/join-request')
+api.add_resource(TeamJoinRequestListResource, '/api/admin/team-join-requests')
+api.add_resource(TeamJoinRequestActionResource, '/api/admin/team-join-requests/<int:request_id>')
+api.add_resource(PublicTeamList, '/api/public/teams')
 # ---------------------------------------------------------------------------------WEB UI ROUTES-----------------------------------------------------------------------------------------------
 @app.route('/')
 def home_page(): 
@@ -1503,6 +1681,16 @@ def tasks_page():
 def story_detail_page(story_id):
     return render_template("story_detail.html", story_id=story_id)
 
+
+@app.route("/admin/requests")
+@jwt_required()
+def admin_requests_page():
+    
+    current_user_id = get_jwt_identity()
+    user_roles = get_user_role(current_user_id)
+    if 'admin' not in user_roles and 'manager' not in user_roles:
+        return "Unauthorized", 403
+    return render_template("admin/requests.html")
 
 if __name__ == "__main__":
     with app.app_context():

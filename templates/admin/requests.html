@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}Admin Requests - Jira{% endblock %}
+{% block content %}
+<style>
+  /* Consistent styling from other pages */
+  .main-layout {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f4f6fa;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 240px;
+    height: calc(100vh - 60px);
+    background: #1a202c;
+    color: #fff;
+    padding: 1.5rem 1rem;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .sidebar h4 {
+    color: #cbd5e0;
+    margin-bottom: 2rem;
+    font-size: 1.2rem;
+  }
+
+  .sidebar a {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    color: #cbd5e0;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.3s, background-color 0.3s;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+  }
+
+  .sidebar a:hover {
+    color: #63b3ed;
+    background-color: #2d3748;
+  }
+  
+  .sidebar a.sidebar-active {
+      background-color: #0052cc;
+      color: #fff;
+  }
+  
+  .sidebar a i {
+    margin-right: 0.8rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .main-content-area {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+    padding: 2rem;
+  }
+
+  h2, h3 {
+    color: #172b4d;
+    margin-bottom: 1.5rem;
+  }
+  
+  h3 {
+      margin-top: 2.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #dfe1e6;
+  }
+
+  .requests-container {
+      background-color: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+  }
+
+  .request-item {
+      padding: 1rem;
+      border-bottom: 1px solid #dfe1e6;
+  }
+  .request-item:last-child {
+      border-bottom: none;
+  }
+  .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: .875rem;
+      border-radius: 0.2rem;
+  }
+</style>
+
+<div class="main-layout">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <h4><i class="fa-solid fa-layer-group"></i> Navigation</h4>
+      <a href="{{ url_for('dashboard') }}" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+      <a href="{{ url_for('epics_page') }}" id="nav-epics"><i class="fa-solid fa-folder-open"></i> Epics</a>
+      <a href="{{ url_for('team_page') }}" id="nav-teams" data-role="manager-admin"><i class="fa-solid fa-users"></i> Teams</a>
+      <a href="{{ url_for('stories_page') }}" id="nav-stories"><i class="fa-solid fa-ticket"></i> Stories</a>
+      <a href="{{ url_for('tasks_page') }}" id="nav-tasks"><i class="fa-solid fa-list-check"></i> Tasks</a>
+      <a href="{{ url_for('sprints_page') }}" id="nav-sprints" data-role="manager-admin"><i class="fa-solid fa-bolt"></i> Sprints</a>
+      <a href="{{ url_for('notifications_page') }}" id="nav-notifications"><i class="fa-solid fa-bell"></i> Notifications</a>
+      <a href="{{ url_for('admin_requests_page') }}" id="nav-admin-requests" data-role="manager-admin"><i class="fa-solid fa-user-shield"></i> Admin Requests</a>
+      <a href="#" onclick="logout()" style="color:#f56565; font-weight:600;"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="main-content-area">
+        <h2>Admin Requests</h2>
+        <div class="error" id="error-msg"></div>
+
+        <!-- Role Upgrade Requests (Admins Only) -->
+        <div class="requests-container" data-role="admin">
+            <h3>Pending Role Upgrade Requests</h3>
+            <div id="role-requests-list">
+                <p>Loading role upgrade requests...</p>
+            </div>
+        </div>
+
+        <!-- Team Join Requests (Admins and Managers) -->
+        <div class="requests-container">
+            <h3>Pending Team Join Requests</h3>
+            <div id="team-requests-list">
+                <p>Loading team join requests...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("access_token");
+    const userInfo = JSON.parse(localStorage.getItem('user_info'));
+    const userRoles = userInfo ? userInfo.roles : [];
+    const isManager = userRoles.includes('manager');
+    const isAdmin = userRoles.includes('admin');
+
+    function requireAuth() {
+        if (!token) {
+            window.location.href = "{{ url_for('login_page') }}";
+            return null;
+        }
+        return token;
+    }
+
+    function showError(message) {
+        const errorDiv = document.getElementById("error-msg");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+    }
+
+    async function loadRoleRequests() {
+        const listDiv = document.getElementById('role-requests-list');
+        try {
+            const res = await fetch('/api/admin/role-requests', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (!res.ok) throw new Error('Could not load role requests.');
+            
+            const requests = await res.json();
+            if (requests.length === 0) {
+                listDiv.innerHTML = '<p>No pending role upgrade requests.</p>';
+                return;
+            }
+
+            let html = '<ul class="list-group list-group-flush">';
+            requests.forEach(req => {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>${req.user_name}</strong> requests to become a <strong>${req.requested_role}</strong>.
+                            <small class="d-block text-muted">Requested on: ${req.requested_at}</small>
+                        </span>
+                        <span>
+                            <button class="btn btn-sm btn-success" onclick="handleRoleRequest(${req.id}, 'approve')">Approve</button>
+                            <button class="btn btn-sm btn-danger" onclick="handleRoleRequest(${req.id}, 'reject')">Reject</button>
+                        </span>
+                    </li>`;
+            });
+            html += '</ul>';
+            listDiv.innerHTML = html;
+
+        } catch (err) {
+            listDiv.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+    }
+
+    async function loadTeamJoinRequests() {
+        const listDiv = document.getElementById('team-requests-list');
+        try {
+            const res = await fetch('/api/admin/team-join-requests', { headers: { 'Authorization': 'Bearer ' + token } });
+            if (!res.ok) throw new Error('Could not load team join requests.');
+            
+            const requests = await res.json();
+            if (requests.length === 0) {
+                listDiv.innerHTML = '<p>No pending team join requests.</p>';
+                return;
+            }
+
+            let html = '<ul class="list-group list-group-flush">';
+            requests.forEach(req => {
+                html += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>${req.user_name}</strong> has requested to join team <strong>"${req.team_name}"</strong>.
+                            <small class="d-block text-muted">Requested on: ${req.requested_at}</small>
+                        </span>
+                        <span>
+                            <button class="btn btn-sm btn-success" onclick="handleTeamRequest(${req.id}, 'approve')">Approve</button>
+                            <button class="btn btn-sm btn-danger" onclick="handleTeamRequest(${req.id}, 'reject')">Reject</button>
+                        </span>
+                    </li>`;
+            });
+            html += '</ul>';
+            listDiv.innerHTML = html;
+
+        } catch (err) {
+            listDiv.innerHTML = `<p class="text-danger">${err.message}</p>`;
+        }
+    }
+
+    window.handleRoleRequest = async function(requestId, action) {
+        try {
+            const res = await fetch(`/api/admin/role-requests/${requestId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            alert(data.message);
+            loadRoleRequests(); // Refresh the list
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    window.handleTeamRequest = async function(requestId, action) {
+        try {
+            const res = await fetch(`/api/admin/team-join-requests/${requestId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            alert(data.message);
+            loadTeamJoinRequests(); // Refresh the list
+        } catch (err) {
+            alert('Error: ' + err.message);
+        }
+    }
+
+    function applyRoleBasedUI() {
+        if (!isAdmin) {
+            // Hide role request section if not an admin
+            document.querySelector('[data-role="admin"]').style.display = 'none';
+        }
+        if (!isManager && !isAdmin) {
+            // Hide other manager/admin links
+            document.querySelectorAll('[data-role="manager-admin"]').forEach(el => {
+                if (el.id !== 'nav-admin-requests') { // Don't hide the link to this page
+                    el.style.display = 'none';
+                }
+            });
+        }
+        document.getElementById('nav-admin-requests').classList.add('sidebar-active');
+    }
+
+    window.onload = () => {
+        requireAuth();
+        applyRoleBasedUI();
+        if (isAdmin) {
+            loadRoleRequests();
+        }
+        if (isAdmin || isManager) {
+            loadTeamJoinRequests();
+        }
+    };
+</script>
+{% endblock %}

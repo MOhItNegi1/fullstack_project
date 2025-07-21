@@ -18,6 +18,10 @@
           background-color: #00875a;
           border-color: #00875a;
       }
+      .btn-danger {
+          background-color: #de350b;
+          border-color: #de350b;
+      }
   </style>
 </head>
 <body class="bg-light">
@@ -36,9 +40,7 @@
           <p><strong>Availability:</strong> <span id="availability"></span></p>
           <p><strong>Roles:</strong> <span id="roles"></span></p>
         </div>
-
         <hr>
-
         <!-- Edit Form -->
         <h5 class="mb-3">Edit Profile</h5>
         <form id="edit-form">
@@ -46,48 +48,37 @@
             <label for="edit-name" class="form-label">Name</label>
             <input type="text" id="edit-name" class="form-control" />
           </div>
-
           <div class="mb-3">
             <label for="edit-phone" class="form-label">Phone</label>
             <input type="text" id="edit-phone" class="form-control" maxlength="10" />
           </div>
-
           <div class="form-check form-switch mb-3">
             <input type="checkbox" class="form-check-input" id="edit-availability" />
             <label class="form-check-label" for="edit-availability">Available</label>
           </div>
-
           <button type="submit" class="btn btn-success">Update Profile</button>
         </form>
       </div>
     </div>
 
-    <!-- START: NEW SECTION FOR ADMIN ROLE MANAGEMENT -->
-    <div id="admin-role-management-section" class="card shadow-lg rounded-4 mt-4" style="display: none;">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fa-solid fa-users-cog"></i> Admin: User Role Management</h5>
-        </div>
+    <!-- START: NEW SECTIONS FOR ROLE REQUESTS -->
+    <div id="developer-request-section" class="card shadow-lg rounded-4 mt-4" style="display: none;">
+        <div class="card-header"><h5 class="mb-0">Role Upgrade</h5></div>
         <div class="card-body">
-            <p>As an administrator, you can change the role of any user in the system.</p>
-            <form id="change-role-form">
-                <div class="mb-3">
-                    <label for="user-select" class="form-label">Select User</label>
-                    <select id="user-select" class="form-select" required></select>
-                </div>
-                <div class="mb-3">
-                    <label for="role-select" class="form-label">Select New Role</label>
-                    <select id="role-select" class="form-select" required>
-                        <option value="developer">Developer</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary">Change Role</button>
-            </form>
-            <div id="change-role-status-msg" class="mt-3"></div>
+            <p>Request an upgrade to a Manager role to access project and team management features.</p>
+            <button id="request-manager-btn" class="btn btn-primary">Request Manager Role</button>
+            <div id="request-status-msg" class="mt-3"></div>
         </div>
     </div>
-    <!-- END: NEW SECTION -->
+
+    <div id="admin-approval-section" class="card shadow-lg rounded-4 mt-4" style="display: none;">
+        <div class="card-header"><h5 class="mb-0">Pending Role Requests</h5></div>
+        <div class="card-body">
+            <p>Review and act on pending requests from developers to become managers.</p>
+            <div id="requests-list"><p>Loading requests...</p></div>
+        </div>
+    </div>
+   
 
   </div>
 
@@ -102,133 +93,117 @@
 
       let currentUserRoles = [];
 
-      // Fetch profile data
-      fetch("/api/users/profile", {
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch profile");
-          return res.json();
-        })
-        .then((data) => {
+      fetch("/api/users/profile", { headers: { Authorization: "Bearer " + token } })
+        .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch profile'))
+        .then(data => {
           currentUserRoles = data.roles;
-
           document.getElementById("email").textContent = data.email;
           document.getElementById("name").textContent = data.name || "N/A";
           document.getElementById("phone").textContent = data.phone || "N/A";
-          document.getElementById("availability").textContent =
-            data.availability ? "Available" : "Unavailable";
+          document.getElementById("availability").textContent = data.availability ? "Available" : "Unavailable";
           document.getElementById("roles").textContent = data.roles.join(", ");
-
-        
           document.getElementById("edit-name").value = data.name || "";
           document.getElementById("edit-phone").value = data.phone || "";
           document.getElementById("edit-availability").checked = data.availability;
           
-          
-          if (currentUserRoles.includes('admin')) {
-              document.getElementById('admin-role-management-section').style.display = 'block';
-              populateUserSelectDropdown();
+          if (currentUserRoles.includes('developer') && !currentUserRoles.includes('manager') && !currentUserRoles.includes('admin')) {
+              document.getElementById('developer-request-section').style.display = 'block';
           }
-     
+          if (currentUserRoles.includes('admin')) {
+              document.getElementById('admin-approval-section').style.display = 'block';
+              loadPendingRequests();
+          }
         })
-        .catch((err) => {
-          alert(err.message);
-        });
+        .catch(err => alert(err));
 
-      // Submit edit form
       document.getElementById("edit-form").addEventListener("submit", function (e) {
         e.preventDefault();
-
-        const name = document.getElementById("edit-name").value;
-        const phone = document.getElementById("edit-phone").value;
-        const availability = document.getElementById("edit-availability").checked;
-
+        const body = {
+            name: document.getElementById("edit-name").value,
+            phone: document.getElementById("edit-phone").value,
+            availability: document.getElementById("edit-availability").checked
+        };
         fetch("/api/users/profile", {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + token,
-          },
-          body: JSON.stringify({ name, phone, availability }),
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify(body),
         })
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to update profile");
-            return res.json();
-          })
-          .then((data) => {
+        .then(res => res.ok ? res.json() : Promise.reject('Failed to update profile'))
+        .then(() => {
             alert("Profile updated successfully!");
             window.location.reload();
-          })
-          .catch((err) => {
-            alert(err.message);
-          });
+        })
+        .catch(err => alert(err));
       });
       
-    
-      async function populateUserSelectDropdown() {
-          const userSelect = document.getElementById('user-select');
+      document.getElementById('request-manager-btn').addEventListener('click', async () => {
+          const statusMsg = document.getElementById('request-status-msg');
           try {
-              const res = await fetch('/api/users/all', {
-                  headers: { 'Authorization': 'Bearer ' + token }
-              });
-              if (!res.ok) throw new Error('Could not load users.');
-              
-              const users = await res.json();
-              userSelect.innerHTML = '<option value="" disabled selected>Select a user to modify</option>';
-              users.forEach(user => {
-                  const option = document.createElement('option');
-                  option.value = user.id;
-                  option.textContent = `${user.name} (${user.email})`;
-                  userSelect.appendChild(option);
-              });
-
-          } catch (err) {
-              userSelect.innerHTML = `<option value="">${err.message}</option>`;
-          }
-      }
-      
-   
-      document.getElementById('change-role-form').addEventListener('submit', async (e) => {
-          e.preventDefault();
-          const statusMsg = document.getElementById('change-role-status-msg');
-          const userId = document.getElementById('user-select').value;
-          const newRole = document.getElementById('role-select').value;
-
-          if (!userId) {
-              alert('Please select a user.');
-              return;
-          }
-
-          if (!confirm(`Are you sure you want to change this user's role to "${newRole}"? This will remove all their previous roles.`)) {
-              return;
-          }
-
-          try {
-              const res = await fetch('/api/admin/change-user-role', {
+              const res = await fetch('/api/users/request-role-upgrade', {
                   method: 'POST',
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Bearer ' + token
-                  },
-                  body: JSON.stringify({ user_id: parseInt(userId), new_role: newRole })
+                  headers: { 
+                      'Authorization': 'Bearer ' + token,
+                      'Content-Type': 'application/json'
+                  }
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data.message);
-              
               statusMsg.className = 'alert alert-success';
               statusMsg.textContent = data.message;
-
+              document.getElementById('request-manager-btn').disabled = true;
           } catch (err) {
               statusMsg.className = 'alert alert-danger';
-              statusMsg.textContent = 'Error: ' + err.message;
+              statusMsg.textContent = err.message;
           }
       });
-      
-     
 
+      async function loadPendingRequests() {
+          const listDiv = document.getElementById('requests-list');
+          try {
+              const res = await fetch('/api/admin/role-requests', { headers: { 'Authorization': 'Bearer ' + token } });
+              if (!res.ok) throw new Error('Could not load requests.');
+              const requests = await res.json();
+              if (requests.length === 0) {
+                  listDiv.innerHTML = '<p>No pending requests.</p>';
+                  return;
+              }
+              let html = '<ul class="list-group">';
+              requests.forEach(req => {
+                  html += `
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                          <span><strong>${req.user_name}</strong> requests <strong>${req.requested_role}</strong> role.</span>
+                          <span>
+                              <button class="btn btn-sm btn-success" onclick="handleRequest(${req.id}, 'approve')">Approve</button>
+                              <button class="btn btn-sm btn-danger" onclick="handleRequest(${req.id}, 'reject')">Reject</button>
+                          </span>
+                      </li>`;
+              });
+              html += '</ul>';
+              listDiv.innerHTML = html;
+          } catch (err) {
+              listDiv.innerHTML = `<p class="text-danger">${err.message}</p>`;
+          }
+      }
+      
+      window.handleRequest = async function(requestId, action) {
+          try {
+              const res = await fetch(`/api/admin/role-requests/${requestId}`, {
+                  method: 'PUT',
+                 
+                  headers: { 
+                      'Content-Type': 'application/json', 
+                      'Authorization': 'Bearer ' + token 
+                  },
+                  body: JSON.stringify({ action })
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.message);
+              alert(data.message);
+              loadPendingRequests();
+          } catch (err) {
+              alert('Error: ' + err.message);
+          }
+      }
     });
   </script>
 </body>

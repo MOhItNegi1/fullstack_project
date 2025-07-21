@@ -15,14 +15,7 @@
       align-items: center;
       justify-content: center;
       height: 100vh;
-      animation: fadeIn 0.5s ease-in;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
     .login-container {
       background-color: white;
       padding: 2.8rem 2.2rem;
@@ -31,121 +24,20 @@
       max-width: 420px;
       width: 100%;
       text-align: center;
-      transition: box-shadow 0.3s ease;
     }
-
-    .login-container:hover {
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .logo-icon {
-      margin-bottom: 1.8rem;
-    }
-
-    .logo-icon i {
-      font-size: 2.8rem;
-      color: #0052cc;
-    }
-
-    h2 {
-      font-size: 1.9rem;
-      color: #172b4d;
-      margin-bottom: 2rem;
-    }
-
-    .input-group {
-      margin-bottom: 1.3rem;
-      text-align: left;
-    }
-
-    .input-group label {
-      display: block;
-      margin-bottom: 0.4rem;
-      font-weight: 500;
-      color: #5e6c84;
-      font-size: 0.92rem;
-    }
-
-    .input-group input,
-    .input-group select {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      border: 1px solid #dfe1e6;
-      border-radius: 6px;
-      font-size: 1rem;
-      transition: border-color 0.25s ease, box-shadow 0.2s;
-    }
-
-    .input-group input:focus,
-    .input-group select:focus {
-      outline: none;
-      border-color: #4c9aff;
-      box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.2);
-    }
-
-    .btn {
-      width: 100%;
-      padding: 0.8rem 1.5rem;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      margin-bottom: 1.2rem;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-    }
-
-    .btn-login {
-      background-color: #0052cc;
-      color: white;
-    }
-
-    .btn-login:hover {
-      background-color: #0065ff;
-    }
-
-    .btn-login:active {
-      transform: translateY(1px);
-    }
-
-    .btn-signup {
-      background-color: transparent;
-      color: #0052cc;
-      border: 1.5px solid #0052cc;
-    }
-
-    .btn-signup:hover {
-      background-color: #e6f4ff;
-    }
-
-    .forgot-password {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-    }
-
-    .forgot-password a {
-      color: #0052cc;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .forgot-password a:hover {
-      text-decoration: underline;
-      color: #0041a8;
-    }
-
-    hr {
-      margin: 1.5rem 0;
-      border: none;
-      border-top: 1px solid #dfe1e6;
-    }
+    .logo-icon i { font-size: 2.8rem; color: #0052cc; }
+    h2 { font-size: 1.9rem; color: #172b4d; margin-bottom: 2rem; }
+    .input-group { margin-bottom: 1.3rem; text-align: left; }
+    .input-group label { display: block; margin-bottom: 0.4rem; font-weight: 500; color: #5e6c84; }
+    .input-group input, .input-group select { width: 100%; padding: 0.75rem 1rem; border: 1px solid #dfe1e6; border-radius: 6px; }
+    .btn { width: 100%; padding: 0.8rem 1.5rem; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+    .btn-login { background-color: #0052cc; color: white; }
+    hr { margin: 1.5rem 0; border: none; border-top: 1px solid #dfe1e6; }
   </style>
 </head>
 <body>
   <div class="login-container">
-    <div class="logo-icon">
-      <i class="fab fa-jira"></i>
-    </div>
+    <div class="logo-icon"><i class="fab fa-jira"></i></div>
     <h2>Log in to Jira</h2>
     <form id="loginForm">
       <div class="input-group">
@@ -156,48 +48,81 @@
         <label for="password">Password</label>
         <input type="password" id="password" name="password" placeholder="Enter your password" required>
       </div>
+      <!-- START: NEW TEAM SELECTION DROPDOWN -->
       <div class="input-group">
-        <label for="role">Role</label>
-        <select id="role" name="role" required>
-          <option value="developer">Developer</option>
-          <option value="manager">Manager</option>
-          <option value="admin">Admin</option>
+        <label for="team-select">Request to Join a Team (Optional)</label>
+        <select id="team-select" name="team">
+            <option value="">No team request</option>
+            <!-- Teams will be populated here -->
         </select>
       </div>
+      <!-- END: NEW DROPDOWN -->
       <button type="submit" class="btn btn-login">Log In</button>
     </form>
-    <div class="forgot-password">
-      <a href="#">Forgot your password?</a>
-    </div>
-    <hr>
-    <a href="{{ url_for('register_page') }}">
-      <button type="button" class="btn btn-signup">Sign up for an account</button>
-    </a>
+    <p style="text-align:center; margin-top:15px;">
+      Don't have an account? <a href="{{ url_for('register_page') }}" style="color:#0052cc;">Sign up</a>
+    </p>
   </div>
 
   <script>
+    // Function to populate teams dropdown on page load
+    async function populateTeams() {
+        try {
+            // This endpoint is now public and safe to call without a token
+            const response = await fetch("/api/public/teams"); 
+            if (!response.ok) return;
+            const teams = await response.json();
+            const teamSelect = document.getElementById("team-select");
+            teams.forEach(team => {
+                const option = document.createElement("option");
+                option.value = team.id;
+                option.textContent = team.name;
+                teamSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Could not load teams for dropdown:", error);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", populateTeams);
+
     document.getElementById("loginForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      const role = document.getElementById("role").value;
+      const teamId = document.getElementById("team-select").value;
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password, role })
-      });
+      try {
+        const loginResponse = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
 
-      const result = await response.json();
+        const loginResult = await loginResponse.json();
+        if (!loginResponse.ok) throw new Error(loginResult.message || "Login failed");
 
-      if (response.ok && result.access_token) {
-        localStorage.setItem("access_token", result.access_token);
-        localStorage.setItem("user_info", JSON.stringify(result.user));
+        localStorage.setItem("access_token", loginResult.access_token);
+        localStorage.setItem("user_info", JSON.stringify(loginResult.user));
+
+        // If a team was selected, send a join request
+        if (teamId) {
+            const token = loginResult.access_token;
+            const teamResponse = await fetch("/api/teams/join-request", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify({ team_id: parseInt(teamId) })
+            });
+            // We don't need to wait for this or alert the user, it will happen in the background
+        }
+
         window.location.href = "{{ url_for('dashboard') }}";
-      } else {
-        alert(result.message || "Login failed");
+
+      } catch (error) {
+          alert(error.message);
       }
     });
   </script>
