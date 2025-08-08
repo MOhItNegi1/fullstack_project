@@ -6,12 +6,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_restful import Api, Resource
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from functools import wraps
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:12345@localhost:5432/jira'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'super-secret'
-app.config['JWT_SECRET_KEY'] = 'jwt-secret-key' 
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = os.environ.get('SQLALCHEMY_TRACK_MODIFICATIONS', 'False').lower() in ('true', '1', 't')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -246,14 +250,14 @@ class Register(Resource):
         email = data.get('email')
         password = data.get('password')
         name = data.get('name')
+        team_id = data.get('team_id') 
 
         if not email or not password:
             return {"message": "Email and password are required"}, 400
 
         if User.query.filter_by(email=email).first():
             return {"message": "User with this email already exists"}, 400
-
-      
+        
         developer_role = Role.query.filter_by(roles='developer').first()
         if not developer_role:
             return {"message": "Default 'developer' role not found in database."}, 500
@@ -261,16 +265,35 @@ class Register(Resource):
         hashed_password = generate_password_hash(password)
         new_user = User(email=email, password=hashed_password)
         db.session.add(new_user)
-        db.session.flush()
+        db.session.flush() 
 
         user_role = UserRoles(user_id=new_user.id, role_id=developer_role.id)
         db.session.add(user_role)
 
         profile = UserProfile(user_id=new_user.id, name=name)
         db.session.add(profile)
+
+
+        if team_id:
+            team = Team.query.get(team_id)
+            if team:
+
+                new_request = TeamJoinRequest(user_id=new_user.id, team_id=team_id, status='pending')
+                db.session.add(new_request)
+
+
+                admins_and_managers = User.query.join(UserRoles).join(Role).filter(Role.roles.in_(['admin', 'manager'])).all()
+                for admin in admins_and_managers:
+                    create_notification(
+                        admin.id, 
+                        "Team Join Request", 
+                        f"User '{name or email}' has requested to join team '{team.name}'."
+                    )
+
+
         db.session.commit()
 
-        return {"message": "Registered successfully! You have been assigned the Developer role."}, 201
+        return {"message": "Registered successfully! Your request to join the team has been sent for approval."}, 201
 
 
 
@@ -1691,6 +1714,35 @@ def admin_requests_page():
     if 'admin' not in user_roles and 'manager' not in user_roles:
         return "Unauthorized", 403
     return render_template("admin/requests.html")
+
+@app.cli.command("seed")
+def seed():
+    """Seeds the database with initial data."""
+    print("Seeding database...")
+    roles_to_seed = ['admin', 'manager', 'developer']
+    for r in roles_to_seed:
+        if not Role.query.filter_by(roles=r).first():
+            db.session.add(Role(roles=r))
+
+    db.session.commit()
+    print("Roles seeded.")
+
+    if not User.query.filter_by(email='admin@example.com').first():
+        admin_user = User(
+            email='admin@example.com',
+            password=generate_password_hash('12345678')
+        )
+        db.session.add(admin_user)
+        db.session.flush()
+
+        admin_profile = UserProfile(user_id=admin_user.id, name='Admin User')
+        admin_role = Role.query.filter_by(roles='admin').first()
+        admin_user_role = UserRoles(user_id=admin_user.id, role_id=admin_role.id)
+
+        db.session.add(admin_profile)
+        db.session.add(admin_user_role)
+        db.session.commit()
+        print("Admin user created.")
 
 if __name__ == "__main__":
     with app.app_context():
