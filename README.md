@@ -19,6 +19,7 @@ Tasks → Actionable steps for completing Stories
 ✅ Teams & Sprints – Build teams, assign members, and plan sprints
 ✅ Interactive UI – Clean, modern interface with modals & dynamic project views
 
+
 🛠 Tech Stack
 
 Backend
