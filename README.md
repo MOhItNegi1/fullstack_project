@@ -42,18 +42,18 @@ Vanilla JavaScript (ES6+)
 
 CSS (minimal, modern design)
 
-📂 Project Structure
+## 📂 Project Structure  
 .
-├── app.py              # Main Flask app (models, routes, config)
-├── seed.py             # Seed script to populate DB with sample data
-├── requirements.txt    # Python dependencies
+├── app.py # Main Flask app (models, routes, config)
+├── seed.py # Seed script to populate DB with sample data
+├── requirements.txt # Python dependencies
 └── templates/
-    ├── base.html       # Navigation
-    ├── layout.html     # Authenticated layout (sidebar, etc.)
-    ├── home.html       # Landing page
-    ├── login.html      # User login
-    ├── signup.html     # User signup
-    ├── dashboard.html  # User dashboard
-    ├── projects.html   # List of projects
-    ├── project_detail.html # Backlog + Board
-    └── (teams, sprints, profile, etc.)
+├── base.html # Navigation
+├── layout.html # Authenticated layout (sidebar, etc.)
+├── home.html # Landing page
+├── login.html # User login
+├── signup.html # User signup
+├── dashboard.html # User dashboard
+├── projects.html # List of projects
+├── project_detail.html # Backlog + Board
+└── (teams, sprints, profile, etc.)
